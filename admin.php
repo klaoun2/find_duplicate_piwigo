@@ -45,7 +45,10 @@ if (isset($_GET['action']) && $_GET['action'] == 'scan')
   $total_row = pwg_db_fetch_assoc(pwg_query($total_query));
   $total_images = (int)$total_row['c'];
   
-  $hashed_query = 'SELECT COUNT(image_id) AS c FROM ' . FIND_DUPLICATES_TABLE;
+  $hashed_query = '
+    SELECT COUNT(h.image_id) AS c
+    FROM ' . FIND_DUPLICATES_TABLE . ' h
+    INNER JOIN ' . IMAGES_TABLE . ' i ON h.image_id = i.id';
   $hashed_row = pwg_db_fetch_assoc(pwg_query($hashed_query));
   $hashed_images = (int)$hashed_row['c'];
   
@@ -63,7 +66,10 @@ $total_query = 'SELECT COUNT(id) AS c FROM ' . IMAGES_TABLE;
 $total_row = pwg_db_fetch_assoc(pwg_query($total_query));
 $total_images = (int)$total_row['c'];
 
-$hashed_query = 'SELECT COUNT(image_id) AS c FROM ' . FIND_DUPLICATES_TABLE;
+$hashed_query = '
+  SELECT COUNT(h.image_id) AS c
+  FROM ' . FIND_DUPLICATES_TABLE . ' h
+  INNER JOIN ' . IMAGES_TABLE . ' i ON h.image_id = i.id';
 $hashed_row = pwg_db_fetch_assoc(pwg_query($hashed_query));
 $hashed_images = (int)$hashed_row['c'];
 
@@ -72,8 +78,9 @@ $duplicates = array();
 if ($hashed_images > 0 && $hashed_images >= $total_images)
 {
   $query = '
-    SELECT h.phash, COUNT(*) as c
+    SELECT h.phash, COUNT(i.id) as c
     FROM ' . FIND_DUPLICATES_TABLE . ' h
+    INNER JOIN ' . IMAGES_TABLE . ' i ON h.image_id = i.id
     WHERE h.phash != \'failed\'
     GROUP BY h.phash
     HAVING c > 1
