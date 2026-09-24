@@ -37,6 +37,18 @@
 #fd-main .fd-toolbar label { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px; }
 #fd-main input[type=range] { vertical-align: middle; }
 #fd-main .fd-warning { color: #d9534f; font-size: 13px; font-weight: bold; display: none; margin-top: 5px; }
+
+#fd-main .fd-pagination { display: flex; justify-content: center; gap: 10px; padding: 20px 0; align-items: center; }
+#fd-main .fd-pagination a, #fd-main .fd-pagination span { 
+  padding: 8px 12px; 
+  border-radius: 6px; 
+  background: rgba(128,128,128,.1); 
+  border: 1px solid rgba(128,128,128,.3); 
+  text-decoration: none; 
+  color: inherit; 
+}
+#fd-main .fd-pagination a:hover { background: rgba(90,150,220,.2); border-color: rgba(90,150,220,.5); }
+#fd-main .fd-pagination span.fd-current { background: rgba(90,150,220,.5); font-weight: bold; }
 </style>
 {/literal}
 
@@ -165,7 +177,7 @@ function scanChunk() {
 <div class="fd-panel">
   <h3>Znalezione duplikaty</h3>
   {if count($FD_DUPLICATES) > 0}
-    <p>Znaleziono {count($FD_DUPLICATES)} grup powiązanych zdjęć.</p>
+    <p>Znaleziono {$FD_TOTAL_GROUPS} grup powiązanych zdjęć. Strona {$FD_CURRENT_PAGE} z {$FD_TOTAL_PAGES}.</p>
     
     <div class="fd-duplicates-list">
       {foreach from=$FD_DUPLICATES item=group}
@@ -187,6 +199,27 @@ function scanChunk() {
         </div>
       {/foreach}
     </div>
+    
+    {if $FD_TOTAL_PAGES > 1}
+    <div class="fd-pagination">
+      {if $FD_CURRENT_PAGE > 1}
+        <a href="{$FD_ACTION_URL}&similarity={$FD_SIMILARITY}&same_album={$FD_SAME_ALBUM}&p={$FD_CURRENT_PAGE-1}">Poprzednia</a>
+      {/if}
+      
+      {for $p=max(1, $FD_CURRENT_PAGE-3) to min($FD_TOTAL_PAGES, $FD_CURRENT_PAGE+3)}
+        {if $p == $FD_CURRENT_PAGE}
+          <span class="fd-current">{$p}</span>
+        {else}
+          <a href="{$FD_ACTION_URL}&similarity={$FD_SIMILARITY}&same_album={$FD_SAME_ALBUM}&p={$p}">{$p}</a>
+        {/if}
+      {/for}
+      
+      {if $FD_CURRENT_PAGE < $FD_TOTAL_PAGES}
+        <a href="{$FD_ACTION_URL}&similarity={$FD_SIMILARITY}&same_album={$FD_SAME_ALBUM}&p={$FD_CURRENT_PAGE+1}">Następna</a>
+      {/if}
+    </div>
+    {/if}
+    
   {else}
     <p>Nie znaleziono żadnych duplikatów.</p>
   {/if}

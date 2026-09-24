@@ -79,6 +79,10 @@ if ($similarity_limit > 100) $similarity_limit = 100;
 
 $same_album = isset($_GET['same_album']) ? (int)$_GET['same_album'] : (!isset($_GET['similarity']) ? 1 : 0);
 
+// User Settings for Pagination
+$current_page_idx = isset($_GET['p']) ? max(1, (int)$_GET['p']) : 1;
+$items_per_page = 20;
+
 // Default Page View Data
 $total_query = 'SELECT COUNT(id) AS c FROM ' . IMAGES_TABLE;
 $total_row = pwg_db_fetch_assoc(pwg_query($total_query));
@@ -95,112 +99,153 @@ $hashed_images = (int)$hashed_row['c'];
 $duplicates = array();
 if ($hashed_images > 0 && $hashed_images >= $total_images)
 {
-  // Calculate max allowed bit difference
-  // similarity = 100% -> 0 bits diff
-  // similarity = 80%  -> 20% of 64 = ~12 bits diff
-  $max_diff = round((100 - $similarity_limit) / 100 * 64);
+  // Cache Setup
+  $cache_dir = PHPWG_ROOT_PATH . '_data/find_duplicates_cache';
+  if (!is_dir($cache_dir)) {
+    mkdir($cache_dir, 0777, true);
+  }
   
-  $query = '
-    SELECT i.id, i.path, i.name, i.file, h.phash, ic.category_id, c.name as cat_name
-    FROM ' . FIND_DUPLICATES_TABLE . ' h
-    INNER JOIN ' . IMAGES_TABLE . ' i ON h.image_id = i.id
-    LEFT JOIN ' . IMAGE_CATEGORY_TABLE . ' ic ON i.id = ic.image_id
-    LEFT JOIN ' . CATEGORIES_TABLE . ' c ON ic.category_id = c.id
-    WHERE h.phash != \'failed\'';
+  // Cache key is based on settings AND the number of hashed images. 
+  // If images are added or removed, the hashed_images count changes, invalidating cache.
+  $cache_filename = $cache_dir . '/cache_s' . $similarity_limit . '_a' . $same_album . '_h' . $hashed_images . '.json';
+  
+  if (file_exists($cache_filename)) {
+    // Load from cache
+    $cached_data = @file_get_contents($cache_filename);
+    if ($cached_data) {
+      $duplicates = json_decode($cached_data, true);
+    }
+  } 
+  
+  if (empty($duplicates) && !file_exists($cache_filename)) {
+    // Generate data
+    $max_diff = round((100 - $similarity_limit) / 100 * 64);
     
-  $result = pwg_query($query);
-  
-  $images_data = array();
-  while ($row = pwg_db_fetch_assoc($result))
-  {
-    $img_id = $row['id'];
-    if (!isset($images_data[$img_id])) {
-      $images_data[$img_id] = array(
-        'ID' => $row['id'],
-        'PATH' => $row['path'],
-        'FILE' => $row['file'],
-        'NAME' => $row['name'] ? $row['name'] : $row['file'],
-        'URL' => get_root_url() . 'admin.php?page=photo-' . $row['id'],
-        'PHASH' => $row['phash'],
-        'ALBUMS' => array()
+    $query = '
+      SELECT i.id, i.path, i.name, i.file, h.phash, ic.category_id, c.name as cat_name
+      FROM ' . FIND_DUPLICATES_TABLE . ' h
+      INNER JOIN ' . IMAGES_TABLE . ' i ON h.image_id = i.id
+      LEFT JOIN ' . IMAGE_CATEGORY_TABLE . ' ic ON i.id = ic.image_id
+      LEFT JOIN ' . CATEGORIES_TABLE . ' c ON ic.category_id = c.id
+      WHERE h.phash != \'failed\'';
+      
+    $result = pwg_query($query);
+    
+    $images_data = array();
+    while ($row = pwg_db_fetch_assoc($result))
+    {
+      $img_id = $row['id'];
+      if (!isset($images_data[$img_id])) {
+        $images_data[$img_id] = array(
+          'ID' => $row['id'],
+          'PATH' => $row['path'],
+          'FILE' => $row['file'],
+          'NAME' => $row['name'] ? $row['name'] : $row['file'],
+          'URL' => get_root_url() . 'admin.php?page=photo-' . $row['id'],
+          'PHASH' => $row['phash'],
+          'ALBUMS' => array()
+        );
+      }
+      if ($row['category_id']) {
+        $images_data[$img_id]['ALBUMS'][$row['category_id']] = $row['cat_name'];
+      }
+    }
+    
+    // Grouping logic
+    $groups = array();
+    $processed_ids = array();
+    
+    foreach ($images_data as $id1 => $img1) {
+      if (isset($processed_ids[$id1])) continue;
+      
+      $current_group = array($id1);
+      
+      foreach ($images_data as $id2 => $img2) {
+        if ($id1 == $id2) continue;
+        if (isset($processed_ids[$id2])) continue;
+        
+        // Check Album Condition
+        if ($same_album) {
+          $shared_albums = array_intersect(array_keys($img1['ALBUMS']), array_keys($img2['ALBUMS']));
+          if (empty($shared_albums)) {
+            continue; // Not in the same album
+          }
+        }
+        
+        // Check Similarity Condition
+        $dist = find_duplicates_hamming_distance($img1['PHASH'], $img2['PHASH']);
+        if ($dist <= $max_diff) {
+          $current_group[] = $id2;
+        }
+      }
+      
+      if (count($current_group) > 1) {
+        $groups[] = $current_group;
+        foreach ($current_group as $gid) {
+          $processed_ids[$gid] = true;
+        }
+      }
+    }
+    
+    $album_counts = array();
+
+    foreach ($groups as $group_ids) {
+      $group_images = array();
+      $album_name = 'Nieznany album';
+      $lead_hash = '';
+      
+      foreach ($group_ids as $idx => $id) {
+        $group_images[] = $images_data[$id];
+        if ($idx === 0) {
+          $lead_hash = $images_data[$id]['PHASH'];
+          if (!empty($images_data[$id]['ALBUMS'])) {
+            $album_name = reset($images_data[$id]['ALBUMS']);
+          }
+        }
+      }
+      
+      if (!isset($album_counts[$album_name])) {
+        $album_counts[$album_name] = 1;
+      } else {
+        $album_counts[$album_name]++;
+      }
+
+      $group_title = $album_name . ' ' . $album_counts[$album_name];
+
+      $duplicates[] = array(
+        'PHASH' => $lead_hash . ($max_diff > 0 ? ' (~' . $similarity_limit . '%)' : ''),
+        'TITLE' => $group_title,
+        'IMAGES' => $group_images
       );
     }
-    if ($row['category_id']) {
-      $images_data[$img_id]['ALBUMS'][$row['category_id']] = $row['cat_name'];
-    }
-  }
-  
-  // Grouping logic
-  $groups = array();
-  $processed_ids = array();
-  
-  foreach ($images_data as $id1 => $img1) {
-    if (isset($processed_ids[$id1])) continue;
     
-    $current_group = array($id1);
-    
-    foreach ($images_data as $id2 => $img2) {
-      if ($id1 == $id2) continue;
-      if (isset($processed_ids[$id2])) continue;
-      
-      // Check Album Condition
-      if ($same_album) {
-        $shared_albums = array_intersect(array_keys($img1['ALBUMS']), array_keys($img2['ALBUMS']));
-        if (empty($shared_albums)) {
-          continue; // Not in the same album
-        }
-      }
-      
-      // Check Similarity Condition
-      $dist = find_duplicates_hamming_distance($img1['PHASH'], $img2['PHASH']);
-      if ($dist <= $max_diff) {
-        $current_group[] = $id2;
-      }
+    // Save to cache, clear old cache files
+    $files = glob($cache_dir . '/*.json');
+    foreach ($files as $file) {
+      @unlink($file); // clean up any old cache files to avoid space bloating
     }
-    
-    if (count($current_group) > 1) {
-      $groups[] = $current_group;
-      foreach ($current_group as $gid) {
-        $processed_ids[$gid] = true;
-      }
-    }
-  }
-  
-  $album_counts = array();
-
-  foreach ($groups as $group_ids) {
-    $group_images = array();
-    $album_name = 'Nieznany album';
-    $lead_hash = '';
-    
-    foreach ($group_ids as $idx => $id) {
-      $group_images[] = $images_data[$id];
-      if ($idx === 0) {
-        $lead_hash = $images_data[$id]['PHASH'];
-        if (!empty($images_data[$id]['ALBUMS'])) {
-          $album_name = reset($images_data[$id]['ALBUMS']);
-        }
-      }
-    }
-    
-    if (!isset($album_counts[$album_name])) {
-      $album_counts[$album_name] = 1;
-    } else {
-      $album_counts[$album_name]++;
-    }
-
-    $group_title = $album_name . ' ' . $album_counts[$album_name];
-
-    $duplicates[] = array(
-      'PHASH' => $lead_hash . ($max_diff > 0 ? ' (~' . $similarity_limit . '%)' : ''),
-      'TITLE' => $group_title,
-      'IMAGES' => $group_images
-    );
+    @file_put_contents($cache_filename, json_encode($duplicates));
   }
 }
 
+// Pagination logic
+$total_duplicates_groups = count($duplicates);
+$total_pages = ceil($total_duplicates_groups / $items_per_page);
+if ($current_page_idx > $total_pages && $total_pages > 0) {
+  $current_page_idx = $total_pages;
+}
+
+$duplicates_page = array();
+if ($total_duplicates_groups > 0) {
+  $offset = ($current_page_idx - 1) * $items_per_page;
+  $duplicates_page = array_slice($duplicates, $offset, $items_per_page);
+}
+
 $template->assign(array(
-  'FD_DUPLICATES' => $duplicates,
+  'FD_DUPLICATES' => $duplicates_page,
+  'FD_TOTAL_GROUPS' => $total_duplicates_groups,
+  'FD_CURRENT_PAGE' => $current_page_idx,
+  'FD_TOTAL_PAGES' => $total_pages,
   'FD_TOTAL_IMAGES' => $total_images,
   'FD_HASHED_IMAGES' => $hashed_images,
   'FD_ACTION_URL' => FIND_DUPLICATES_ADMIN,
