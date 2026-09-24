@@ -1,23 +1,23 @@
 {literal}
 <style>
 #fd-main { max-width: 1300px; color: inherit; }
-#fd-main .fd-panel {
-  background: rgba(128,128,128,.08);
-  padding: 20px;
-  border-radius: 10px;
-  border: 1px solid rgba(128,128,128,.3);
+#fd-main .fd-panel { 
+  background: rgba(128,128,128,.08); 
+  padding: 20px; 
+  border-radius: 10px; 
+  border: 1px solid rgba(128,128,128,.3); 
   margin-bottom: 20px;
   backdrop-filter: blur(4px);
 }
 #fd-main .fd-panel h3 { margin-top: 0; font-size: 1.2em; }
-#fd-main .fd-btn {
-  padding: 8px 14px;
-  border-radius: 6px;
-  border: 1px solid rgba(90,150,220,.5);
-  background: rgba(90,150,220,.12);
-  color: inherit;
-  cursor: pointer;
-  font-size: 14px;
+#fd-main .fd-btn { 
+  padding: 8px 14px; 
+  border-radius: 6px; 
+  border: 1px solid rgba(90,150,220,.5); 
+  background: rgba(90,150,220,.12); 
+  color: inherit; 
+  cursor: pointer; 
+  font-size: 14px; 
 }
 #fd-main .fd-btn:hover { background: rgba(90,150,220,.25); }
 #fd-main .fd-btn:disabled { background: rgba(128,128,128,.1); border-color: rgba(128,128,128,.2); cursor: not-allowed; opacity: 0.6; }
@@ -28,11 +28,11 @@
 #fd-main .fd-img-wrap { width: 150px; text-align: center; }
 #fd-main .fd-img-wrap img { max-width: 100%; height: auto; border: 1px solid rgba(128,128,128,.4); border-radius: 6px; }
 #fd-main .fd-img-wrap .fd-img-info { font-size: 11px; margin-top: 5px; word-break: break-all; opacity: 0.8; }
-#fd-main .fd-toolbar {
-  display: flex; flex-wrap: wrap; gap: 15px; align-items: center;
-  padding: 10px 15px; margin-bottom: 20px;
-  border: 1px solid rgba(128,128,128,.3); border-radius: 10px;
-  background: rgba(128,128,128,.08); backdrop-filter: blur(4px);
+#fd-main .fd-toolbar { 
+  display: flex; flex-wrap: wrap; gap: 15px; align-items: center; 
+  padding: 10px 15px; margin-bottom: 20px; 
+  border: 1px solid rgba(128,128,128,.3); border-radius: 10px; 
+  background: rgba(128,128,128,.08); backdrop-filter: blur(4px); 
 }
 #fd-main .fd-toolbar label { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px; }
 #fd-main input[type=range] { vertical-align: middle; }
@@ -109,20 +109,19 @@ function scanChunk() {
 
 {if $FD_HASHED_IMAGES >= $FD_TOTAL_IMAGES && $FD_TOTAL_IMAGES > 0}
 
-<form method="GET" action="" id="fd-filter-form">
-  <input type="hidden" name="page" value="{$FD_PAGE_NAME}">
+<form id="fd-filter-form">
   <div class="fd-toolbar">
     <label>
-      Podobieństwo:
-      <input type="range" name="similarity" id="fd-similarity-range" min="80" max="100" value="{$FD_SIMILARITY}" oninput="document.getElementById('fd-sim-val').innerText = this.value + '%'">
+      Podobieństwo: 
+      <input type="range" id="fd-similarity-range" min="80" max="100" value="{$FD_SIMILARITY}" oninput="document.getElementById('fd-sim-val').innerText = this.value + '%'">
       <span id="fd-sim-val">{$FD_SIMILARITY}%</span>
     </label>
-
+    
     <label>
-      <input type="checkbox" name="same_album" id="fd-same-album-chk" value="1" {if $FD_SAME_ALBUM}checked{/if}>
+      <input type="checkbox" id="fd-same-album-chk" value="1" {if $FD_SAME_ALBUM}checked{/if}>
       Szukaj tylko w tym samym albumie
     </label>
-
+    
     <button type="submit" class="fd-btn">Zastosuj</button>
   </div>
   <div class="fd-warning" id="fd-warning-msg"></div>
@@ -130,10 +129,21 @@ function scanChunk() {
 
 <script type="text/javascript">
 (function(){
+  var actionUrl = "{$FD_ACTION_URL}";
   var totalImages = {$FD_TOTAL_IMAGES};
   var chk = document.getElementById('fd-same-album-chk');
   var warnMsg = document.getElementById('fd-warning-msg');
-
+  var form = document.getElementById('fd-filter-form');
+  
+  if (form) {
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
+      var sim = document.getElementById('fd-similarity-range').value;
+      var sameAlbum = chk.checked ? 1 : 0;
+      window.location.href = actionUrl + '&similarity=' + sim + '&same_album=' + sameAlbum;
+    });
+  }
+  
   function updateWarning() {
     if (!chk.checked) {
       var comparisons = (totalImages * (totalImages - 1)) / 2;
@@ -144,7 +154,7 @@ function scanChunk() {
       warnMsg.style.display = 'none';
     }
   }
-
+  
   if (chk) {
     chk.addEventListener('change', updateWarning);
     updateWarning(); // init

@@ -99,7 +99,7 @@ if ($hashed_images > 0 && $hashed_images >= $total_images)
   // similarity = 100% -> 0 bits diff
   // similarity = 80%  -> 20% of 64 = ~12 bits diff
   $max_diff = round((100 - $similarity_limit) / 100 * 64);
-
+  
   $query = '
     SELECT i.id, i.path, i.name, i.file, h.phash, ic.category_id, c.name as cat_name
     FROM ' . FIND_DUPLICATES_TABLE . ' h
@@ -107,7 +107,7 @@ if ($hashed_images > 0 && $hashed_images >= $total_images)
     LEFT JOIN ' . IMAGE_CATEGORY_TABLE . ' ic ON i.id = ic.image_id
     LEFT JOIN ' . CATEGORIES_TABLE . ' c ON ic.category_id = c.id
     WHERE h.phash != \'failed\'';
-
+    
   $result = pwg_query($query);
   
   $images_data = array();
@@ -129,11 +129,11 @@ if ($hashed_images > 0 && $hashed_images >= $total_images)
       $images_data[$img_id]['ALBUMS'][$row['category_id']] = $row['cat_name'];
     }
   }
-
+  
   // Grouping logic
   $groups = array();
   $processed_ids = array();
-
+  
   foreach ($images_data as $id1 => $img1) {
     if (isset($processed_ids[$id1])) continue;
     
@@ -142,7 +142,7 @@ if ($hashed_images > 0 && $hashed_images >= $total_images)
     foreach ($images_data as $id2 => $img2) {
       if ($id1 == $id2) continue;
       if (isset($processed_ids[$id2])) continue;
-
+      
       // Check Album Condition
       if ($same_album) {
         $shared_albums = array_intersect(array_keys($img1['ALBUMS']), array_keys($img2['ALBUMS']));
@@ -150,7 +150,7 @@ if ($hashed_images > 0 && $hashed_images >= $total_images)
           continue; // Not in the same album
         }
       }
-
+      
       // Check Similarity Condition
       $dist = find_duplicates_hamming_distance($img1['PHASH'], $img2['PHASH']);
       if ($dist <= $max_diff) {
@@ -165,14 +165,14 @@ if ($hashed_images > 0 && $hashed_images >= $total_images)
       }
     }
   }
-
+  
   $album_counts = array();
 
   foreach ($groups as $group_ids) {
     $group_images = array();
     $album_name = 'Nieznany album';
     $lead_hash = '';
-
+    
     foreach ($group_ids as $idx => $id) {
       $group_images[] = $images_data[$id];
       if ($idx === 0) {
@@ -182,7 +182,7 @@ if ($hashed_images > 0 && $hashed_images >= $total_images)
         }
       }
     }
-
+    
     if (!isset($album_counts[$album_name])) {
       $album_counts[$album_name] = 1;
     } else {
