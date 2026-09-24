@@ -87,6 +87,8 @@ if ($hashed_images > 0 && $hashed_images >= $total_images)
     ORDER BY c DESC';
   $result = pwg_query($query);
   
+  $album_counts = array();
+
   while ($row = pwg_db_fetch_assoc($result))
   {
     $phash = $row['phash'];
@@ -99,14 +101,10 @@ if ($hashed_images > 0 && $hashed_images >= $total_images)
       WHERE h.phash = \'' . $phash . '\'';
     $img_result = pwg_query($img_query);
     
-    $group = array(
-      'PHASH' => $phash,
-      'IMAGES' => array()
-    );
-    
+    $images = array();
     while ($img_row = pwg_db_fetch_assoc($img_result))
     {
-      $group['IMAGES'][] = array(
+      $images[] = array(
         'ID' => $img_row['id'],
         'PATH' => $img_row['path'],
         'FILE' => $img_row['file'],
@@ -115,6 +113,41 @@ if ($hashed_images > 0 && $hashed_images >= $total_images)
       );
     }
     
+    // Attempt to get an album name from the first image
+    $album_name = 'Nieznany album';
+    if (count($images) > 0)
+    {
+      $first_img_id = $images[0]['ID'];
+      $album_query = '
+        SELECT c.name
+        FROM ' . CATEGORIES_TABLE . ' c
+        INNER JOIN ' . IMAGE_CATEGORY_TABLE . ' ic ON c.id = ic.category_id
+        WHERE ic.image_id = ' . (int)$first_img_id . '
+        LIMIT 1';
+      $album_result = pwg_query($album_query);
+      if ($album_row = pwg_db_fetch_assoc($album_result))
+      {
+        $album_name = $album_row['name'];
+      }
+    }
+
+    if (!isset($album_counts[$album_name]))
+    {
+      $album_counts[$album_name] = 1;
+    }
+    else
+    {
+      $album_counts[$album_name]++;
+    }
+
+    $group_title = $album_name . ' ' . $album_counts[$album_name];
+
+    $group = array(
+      'PHASH' => $phash,
+      'TITLE' => $group_title,
+      'IMAGES' => $images
+    );
+
     $duplicates[] = $group;
   }
 }
