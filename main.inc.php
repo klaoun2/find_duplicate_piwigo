@@ -90,6 +90,19 @@ function find_duplicates_on_upload($image_infos)
   }
 }
 
+// Clean up when an image is deleted
+add_event_handler('delete_elements', 'find_duplicates_on_delete');
+
+function find_duplicates_on_delete($ids)
+{
+  if (empty($ids)) return;
+
+  $query = '
+    DELETE FROM ' . FIND_DUPLICATES_TABLE . '
+    WHERE image_id IN (' . implode(',', $ids) . ')';
+  pwg_query($query);
+}
+
 // Admin menu link
 add_event_handler('get_admin_plugin_menu_links', 'find_duplicates_admin_menu');
 function find_duplicates_admin_menu($menu)

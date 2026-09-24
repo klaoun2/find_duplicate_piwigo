@@ -83,7 +83,7 @@ function scanChunk() {
     <div class="fd-duplicates-list">
       {foreach from=$FD_DUPLICATES item=group}
         <div style="border: 1px solid #ddd; margin-bottom: 20px; padding: 15px; border-radius: 5px;">
-          <h4>Hash: {$group.PHASH}</h4>
+          <h4>{$group.TITLE} <span style="font-size: 11px; color: #888; font-weight: normal;">(Hash: {$group.PHASH})</span></h4>
           <div style="display: flex; gap: 15px; flex-wrap: wrap;">
             {foreach from=$group.IMAGES item=img}
               <div style="width: 150px; text-align: center;">
