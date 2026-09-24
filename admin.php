@@ -241,11 +241,16 @@ if ($total_duplicates_groups > 0) {
   $duplicates_page = array_slice($duplicates, $offset, $items_per_page);
 }
 
+$start_page = max(1, $current_page_idx - 3);
+$end_page = min($total_pages, $current_page_idx + 3);
+
 $template->assign(array(
   'FD_DUPLICATES' => $duplicates_page,
   'FD_TOTAL_GROUPS' => $total_duplicates_groups,
   'FD_CURRENT_PAGE' => $current_page_idx,
   'FD_TOTAL_PAGES' => $total_pages,
+  'FD_START_PAGE' => $start_page,
+  'FD_END_PAGE' => $end_page,
   'FD_TOTAL_IMAGES' => $total_images,
   'FD_HASHED_IMAGES' => $hashed_images,
   'FD_ACTION_URL' => FIND_DUPLICATES_ADMIN,

@@ -206,7 +206,7 @@ function scanChunk() {
         <a href="{$FD_ACTION_URL}&similarity={$FD_SIMILARITY}&same_album={$FD_SAME_ALBUM}&p={$FD_CURRENT_PAGE-1}">Poprzednia</a>
       {/if}
       
-      {for $p=max(1, $FD_CURRENT_PAGE-3) to min($FD_TOTAL_PAGES, $FD_CURRENT_PAGE+3)}
+      {for $p=$FD_START_PAGE to $FD_END_PAGE}
         {if $p == $FD_CURRENT_PAGE}
           <span class="fd-current">{$p}</span>
         {else}
