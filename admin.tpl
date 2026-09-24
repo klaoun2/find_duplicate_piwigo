@@ -1,13 +1,46 @@
 {literal}
 <style>
-.fd-panel { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 20px; }
-.fd-btn { padding: 10px 15px; border-radius: 5px; background: #0073aa; color: #fff; border: none; cursor: pointer; font-size: 14px; }
-.fd-btn:hover { background: #005177; }
-.fd-btn:disabled { background: #ccc; cursor: not-allowed; }
-.fd-progress-container { margin-top: 15px; height: 20px; background: #f0f0f0; border-radius: 10px; overflow: hidden; display: none; }
-.fd-progress-bar { height: 100%; background: #4caf50; width: 0%; transition: width 0.3s ease; }
+#fd-main { max-width: 1300px; color: inherit; }
+#fd-main .fd-panel {
+  background: rgba(128,128,128,.08);
+  padding: 20px;
+  border-radius: 10px;
+  border: 1px solid rgba(128,128,128,.3);
+  margin-bottom: 20px;
+  backdrop-filter: blur(4px);
+}
+#fd-main .fd-panel h3 { margin-top: 0; font-size: 1.2em; }
+#fd-main .fd-btn {
+  padding: 8px 14px;
+  border-radius: 6px;
+  border: 1px solid rgba(90,150,220,.5);
+  background: rgba(90,150,220,.12);
+  color: inherit;
+  cursor: pointer;
+  font-size: 14px;
+}
+#fd-main .fd-btn:hover { background: rgba(90,150,220,.25); }
+#fd-main .fd-btn:disabled { background: rgba(128,128,128,.1); border-color: rgba(128,128,128,.2); cursor: not-allowed; opacity: 0.6; }
+#fd-main .fd-progress-container { margin-top: 15px; height: 15px; background: rgba(128,128,128,.15); border-radius: 8px; overflow: hidden; display: none; }
+#fd-main .fd-progress-bar { height: 100%; background: rgba(90,160,90,.8); width: 0%; transition: width 0.3s ease; }
+#fd-main .fd-group { border: 1px solid rgba(128,128,128,.3); margin-bottom: 20px; padding: 15px; border-radius: 10px; background: rgba(128,128,128,.04); }
+#fd-main .fd-group h4 { margin-top: 0; }
+#fd-main .fd-img-wrap { width: 150px; text-align: center; }
+#fd-main .fd-img-wrap img { max-width: 100%; height: auto; border: 1px solid rgba(128,128,128,.4); border-radius: 6px; }
+#fd-main .fd-img-wrap .fd-img-info { font-size: 11px; margin-top: 5px; word-break: break-all; opacity: 0.8; }
+#fd-main .fd-toolbar {
+  display: flex; flex-wrap: wrap; gap: 15px; align-items: center;
+  padding: 10px 15px; margin-bottom: 20px;
+  border: 1px solid rgba(128,128,128,.3); border-radius: 10px;
+  background: rgba(128,128,128,.08); backdrop-filter: blur(4px);
+}
+#fd-main .fd-toolbar label { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px; }
+#fd-main input[type=range] { vertical-align: middle; }
+#fd-main .fd-warning { color: #d9534f; font-size: 13px; font-weight: bold; display: none; margin-top: 5px; }
 </style>
 {/literal}
+
+<div id="fd-main">
 
 <div class="titrePage">
   <h2>Wyszukiwarka Duplikatów</h2>
@@ -75,6 +108,50 @@ function scanChunk() {
 </script>
 
 {if $FD_HASHED_IMAGES >= $FD_TOTAL_IMAGES && $FD_TOTAL_IMAGES > 0}
+
+<form method="GET" action="" id="fd-filter-form">
+  <input type="hidden" name="page" value="{$FD_PAGE_NAME}">
+  <div class="fd-toolbar">
+    <label>
+      Podobieństwo:
+      <input type="range" name="similarity" id="fd-similarity-range" min="80" max="100" value="{$FD_SIMILARITY}" oninput="document.getElementById('fd-sim-val').innerText = this.value + '%'">
+      <span id="fd-sim-val">{$FD_SIMILARITY}%</span>
+    </label>
+
+    <label>
+      <input type="checkbox" name="same_album" id="fd-same-album-chk" value="1" {if $FD_SAME_ALBUM}checked{/if}>
+      Szukaj tylko w tym samym albumie
+    </label>
+
+    <button type="submit" class="fd-btn">Zastosuj</button>
+  </div>
+  <div class="fd-warning" id="fd-warning-msg"></div>
+</form>
+
+<script type="text/javascript">
+(function(){
+  var totalImages = {$FD_TOTAL_IMAGES};
+  var chk = document.getElementById('fd-same-album-chk');
+  var warnMsg = document.getElementById('fd-warning-msg');
+
+  function updateWarning() {
+    if (!chk.checked) {
+      var comparisons = (totalImages * (totalImages - 1)) / 2;
+      var compStr = comparisons.toLocaleString();
+      warnMsg.innerText = 'Uwaga: Wyłączono szukanie w tym samym albumie. Zostanie wykonanych ok. ' + compStr + ' porównań. To może zająć dłuższą chwilę i obciążyć serwer.';
+      warnMsg.style.display = 'block';
+    } else {
+      warnMsg.style.display = 'none';
+    }
+  }
+
+  if (chk) {
+    chk.addEventListener('change', updateWarning);
+    updateWarning(); // init
+  }
+})();
+</script>
+
 <div class="fd-panel">
   <h3>Znalezione duplikaty</h3>
   {if count($FD_DUPLICATES) > 0}
@@ -82,15 +159,15 @@ function scanChunk() {
     
     <div class="fd-duplicates-list">
       {foreach from=$FD_DUPLICATES item=group}
-        <div style="border: 1px solid #ddd; margin-bottom: 20px; padding: 15px; border-radius: 5px;">
-          <h4>{$group.TITLE} <span style="font-size: 11px; color: #888; font-weight: normal;">(Hash: {$group.PHASH})</span></h4>
+        <div class="fd-group">
+          <h4>{$group.TITLE} <span style="font-size: 11px; opacity: 0.6; font-weight: normal;">(Hash: {$group.PHASH})</span></h4>
           <div style="display: flex; gap: 15px; flex-wrap: wrap;">
             {foreach from=$group.IMAGES item=img}
-              <div style="width: 150px; text-align: center;">
+              <div class="fd-img-wrap">
                 <a href="{$img.URL}" target="_blank">
-                  <img src="{$img.PATH}" style="max-width: 100%; height: auto; border: 1px solid #ccc; border-radius: 4px;" alt="{$img.NAME}">
+                  <img src="{$img.PATH}" alt="{$img.NAME}">
                 </a>
-                <div style="font-size: 11px; margin-top: 5px; word-break: break-all;">
+                <div class="fd-img-info">
                   ID: {$img.ID}<br>
                   {$img.FILE}
                 </div>
@@ -105,3 +182,5 @@ function scanChunk() {
   {/if}
 </div>
 {/if}
+
+</div> <!-- /#fd-main -->
