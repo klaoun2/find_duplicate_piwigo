@@ -72,6 +72,17 @@ if (isset($_GET['action']) && $_GET['action'] == 'delete_image') {
 
   $image_id = (int)$_GET['image_id'];
 
+  // Zapisanie rozmiaru pliku przed usunięciem
+  $file_size = 0;
+  $query = 'SELECT path FROM ' . IMAGES_TABLE . ' WHERE id = ' . $image_id;
+  $result = pwg_query($query);
+  if ($row = pwg_db_fetch_assoc($result)) {
+    $abs_path = PHPWG_ROOT_PATH . $row['path'];
+    if (file_exists($abs_path)) {
+      $file_size = filesize($abs_path);
+    }
+  }
+
   // Usunięcie zdjęcia korzystając z funkcji Piwigo
   include_once(PHPWG_ROOT_PATH . 'admin/include/functions.php');
   if (function_exists('delete_elements')) {
@@ -82,8 +93,15 @@ if (isset($_GET['action']) && $_GET['action'] == 'delete_image') {
     pwg_query('DELETE FROM ' . FIND_DUPLICATES_TABLE . ' WHERE image_id = ' . $image_id);
   }
 
-  // Odświeżenie Cache w locie
+  // Odświeżenie Cache w locie i zapisanie zaoszczędzonego miejsca
   global $conf;
+
+  $saved_space = isset($conf['find_duplicates_saved_space']) ? (int)$conf['find_duplicates_saved_space'] : 0;
+  if ($file_size > 0) {
+    $saved_space += $file_size;
+    conf_update_param('find_duplicates_saved_space', $saved_space);
+  }
+
   $cache_dir = PHPWG_ROOT_PATH . '_data/find_duplicates_cache';
   $similarity_limit = isset($conf['find_duplicates_similarity']) ? (int)$conf['find_duplicates_similarity'] : 100;
   $same_album = isset($conf['find_duplicates_same_album']) ? (int)$conf['find_duplicates_same_album'] : 0;
@@ -128,7 +146,12 @@ if (isset($_GET['action']) && $_GET['action'] == 'delete_image') {
     }
   }
 
-  echo json_encode(array('status' => 'ok', 'message' => 'Image deleted and cache updated.'));
+  echo json_encode(array(
+    'status' => 'ok',
+    'message' => 'Image deleted and cache updated.',
+    'deleted_bytes' => $file_size,
+    'total_saved_bytes' => $saved_space
+  ));
   die();
 }
 
@@ -166,6 +189,19 @@ if (isset($_GET['similarity'])) {
 // User Settings for Pagination
 $current_page_idx = isset($_GET['p']) ? max(1, (int)$_GET['p']) : 1;
 $items_per_page = 20;
+
+// Helper: format bytes
+function find_duplicates_format_bytes($bytes) {
+  if ($bytes >= 1048576) {
+    return number_format($bytes / 1048576, 2) . ' MB';
+  } elseif ($bytes >= 1024) {
+    return number_format($bytes / 1024, 2) . ' KB';
+  }
+  return $bytes . ' B';
+}
+
+$saved_space = isset($conf['find_duplicates_saved_space']) ? (int)$conf['find_duplicates_saved_space'] : 0;
+$saved_space_formatted = find_duplicates_format_bytes($saved_space);
 
 // Default Page View Data
 $total_query = 'SELECT COUNT(id) AS c FROM ' . IMAGES_TABLE;
@@ -365,6 +401,7 @@ $template->assign(array(
   'FD_PAGE_NAME' => isset($_GET['page']) ? $_GET['page'] : 'plugin-' . FIND_DUPLICATES_ID,
   'FD_SIMILARITY' => $similarity_limit,
   'FD_SAME_ALBUM' => $same_album,
+  'FD_TOTAL_SAVED_SPACE' => $saved_space_formatted,
 ));
 
 $template->set_filenames(array('plugin_admin_content' => FIND_DUPLICATES_PATH . 'admin.tpl'));

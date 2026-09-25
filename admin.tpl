@@ -71,14 +71,24 @@
 }
 #fd-main .fd-pagination a:hover { background: rgba(90,150,220,.2); border-color: rgba(90,150,220,.5); }
 #fd-main .fd-pagination span.fd-current { background: rgba(90,150,220,.5); font-weight: bold; }
+
+/* Toast Notification */
+.fd-toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 10000; display: flex; flex-direction: column; gap: 10px; }
+.fd-toast { background: rgba(40,167,69,.9); color: white; padding: 12px 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); font-weight: bold; font-size: 14px; opacity: 0; transform: translateY(20px); transition: opacity 0.3s ease, transform 0.3s ease; backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,.2); }
+.fd-toast.fd-toast-show { opacity: 1; transform: translateY(0); }
+
+/* Saved space badge */
+.fd-saved-space-badge { display: inline-block; background: rgba(40,167,69,.2); border: 1px solid rgba(40,167,69,.5); color: inherit; padding: 5px 12px; border-radius: 20px; font-weight: bold; font-size: 14px; margin-left: 15px; vertical-align: middle; }
 </style>
 {/literal}
 
 <div id="fd-main">
 
 <div class="titrePage">
-  <h2>Wyszukiwarka Duplikatów</h2>
+  <h2>Wyszukiwarka Duplikatów <span class="fd-saved-space-badge" id="fd-top-saved-space">Zaoszczędzone miejsce: {$FD_TOTAL_SAVED_SPACE}</span></h2>
 </div>
+
+<div class="fd-toast-container" id="fd-toast-container"></div>
 
 <div class="fd-panel">
   <h3>Stan skanowania galerii</h3>
@@ -345,6 +355,40 @@ function scanChunk() {
       container.appendChild(wrap);
     });
 
+    // Format Bytes Helper for JS
+    function formatBytes(bytes) {
+      if (bytes >= 1048576) {
+        return (bytes / 1048576).toFixed(2) + ' MB';
+      } else if (bytes >= 1024) {
+        return (bytes / 1024).toFixed(2) + ' KB';
+      }
+      return bytes + ' B';
+    }
+
+    // Toast Helper
+    function showToast(message) {
+      var container = document.getElementById('fd-toast-container');
+      var toast = document.createElement('div');
+      toast.className = 'fd-toast';
+      toast.innerText = message;
+      container.appendChild(toast);
+
+      // Animate in
+      requestAnimationFrame(function() {
+        requestAnimationFrame(function() {
+          toast.classList.add('fd-toast-show');
+        });
+      });
+
+      // Remove after 4 seconds
+      setTimeout(function() {
+        toast.classList.remove('fd-toast-show');
+        setTimeout(function() {
+          if(toast.parentNode) toast.parentNode.removeChild(toast);
+        }, 300);
+      }, 4000);
+    }
+
     // Reset classes and show
     modal.classList.remove('fd-modal-closing');
     modal.style.display = 'block';
@@ -370,6 +414,19 @@ function scanChunk() {
       .then(data => {
         if (data.status === 'ok') {
           btn.innerHTML = 'Usunięto';
+
+          // Format bytes for toast
+          var deletedFormatted = formatBytes(data.deleted_bytes || 0);
+          var totalFormatted = formatBytes(data.total_saved_bytes || 0);
+
+          // Update top counter
+          document.getElementById('fd-top-saved-space').innerText = 'Zaoszczędzone miejsce: ' + totalFormatted;
+
+          // Show toast
+          if ((data.deleted_bytes || 0) > 0) {
+            showToast('Zaoszczędzono: ' + deletedFormatted + ' (Łącznie: ' + totalFormatted + ')');
+          }
+
           // Trigger collapse animation
           wrapEl.classList.add('fd-collapsing');
 
