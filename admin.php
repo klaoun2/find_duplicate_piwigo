@@ -61,6 +61,16 @@ if (isset($_GET['action']) && $_GET['action'] == 'scan')
   die();
 }
 
+// Helper: format bytes
+function find_duplicates_format_bytes($bytes) {
+  if ($bytes >= 1048576) {
+    return number_format($bytes / 1048576, 2) . ' MB';
+  } elseif ($bytes >= 1024) {
+    return number_format($bytes / 1024, 2) . ' KB';
+  }
+  return $bytes . ' B';
+}
+
 // Handle AJAX image deletion
 if (isset($_GET['action']) && $_GET['action'] == 'delete_image') {
   check_pwg_token();
@@ -116,8 +126,8 @@ if (isset($_GET['action']) && $_GET['action'] == 'delete_image') {
 
   // Odczytujemy stary plik (przed usunięciem), gdzie zahashowanych było o 1 więcej
   $old_hashed_images = $current_hashed_images + 1;
-  $old_cache_filename = $cache_dir . '/cache_v3_s' . $similarity_limit . '_a' . $same_album . '_h' . $old_hashed_images . '.json';
-  $new_cache_filename = $cache_dir . '/cache_v3_s' . $similarity_limit . '_a' . $same_album . '_h' . $current_hashed_images . '.json';
+  $old_cache_filename = $cache_dir . '/cache_v4_s' . $similarity_limit . '_a' . $same_album . '_h' . $old_hashed_images . '.json';
+  $new_cache_filename = $cache_dir . '/cache_v4_s' . $similarity_limit . '_a' . $same_album . '_h' . $current_hashed_images . '.json';
 
   if (file_exists($old_cache_filename)) {
     $cached_data = @file_get_contents($old_cache_filename);
@@ -127,15 +137,25 @@ if (isset($_GET['action']) && $_GET['action'] == 'delete_image') {
 
       foreach ($duplicates as $group) {
         $filtered_images = array();
+        $group_total_bytes = 0;
         foreach ($group['IMAGES'] as $img) {
           if ($img['ID'] != $image_id) {
             $filtered_images[] = $img;
+            if (isset($img['FILE_SIZE_BYTES'])) {
+              $group_total_bytes += $img['FILE_SIZE_BYTES'];
+            }
           }
         }
 
         // Zostawiamy grupę, tylko jeśli zostało w niej więcej niż 1 zdjęcie
         if (count($filtered_images) > 1) {
           $group['IMAGES'] = $filtered_images;
+
+          // Helper: format bytes - upewnijmy się że funkcja jest dostępna wyżej
+          if (function_exists('find_duplicates_format_bytes')) {
+             $group['TOTAL_SIZE'] = find_duplicates_format_bytes($group_total_bytes);
+          }
+
           $new_duplicates[] = $group;
         }
       }
@@ -190,16 +210,6 @@ if (isset($_GET['similarity'])) {
 $current_page_idx = isset($_GET['p']) ? max(1, (int)$_GET['p']) : 1;
 $items_per_page = 20;
 
-// Helper: format bytes
-function find_duplicates_format_bytes($bytes) {
-  if ($bytes >= 1048576) {
-    return number_format($bytes / 1048576, 2) . ' MB';
-  } elseif ($bytes >= 1024) {
-    return number_format($bytes / 1024, 2) . ' KB';
-  }
-  return $bytes . ' B';
-}
-
 $saved_space = isset($conf['find_duplicates_saved_space']) ? (int)$conf['find_duplicates_saved_space'] : 0;
 $saved_space_formatted = find_duplicates_format_bytes($saved_space);
 
@@ -227,8 +237,8 @@ if ($hashed_images > 0 && $hashed_images >= $total_images)
   
   // Cache key is based on settings AND the number of hashed images. 
   // If images are added or removed, the hashed_images count changes, invalidating cache.
-  // Added _v3 to force invalidate old caches without group sizes.
-  $cache_filename = $cache_dir . '/cache_v3_s' . $similarity_limit . '_a' . $same_album . '_h' . $hashed_images . '.json';
+  // Added _v4 to force invalidate old caches due to TOTAL_SIZE missing bug.
+  $cache_filename = $cache_dir . '/cache_v4_s' . $similarity_limit . '_a' . $same_album . '_h' . $hashed_images . '.json';
   
   if (file_exists($cache_filename)) {
     // Load from cache
