@@ -38,16 +38,22 @@
 #fd-main input[type=range] { vertical-align: middle; }
 #fd-main .fd-warning { color: #d9534f; font-size: 13px; font-weight: bold; display: none; margin-top: 5px; }
 
-#fd-main .fd-group { cursor: pointer; transition: background 0.2s; }
+#fd-main .fd-group { cursor: pointer; transition: background 0.2s, opacity 0.3s ease; opacity: 1; }
+#fd-main .fd-group.fd-fading-out { opacity: 0; pointer-events: none; }
 #fd-main .fd-group:hover { background: rgba(128,128,128,.1) !important; }
 
 /* Modal CSS */
-#fd-modal { display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.8); backdrop-filter: blur(5px); overflow: auto; }
-#fd-modal-content { background: var(--theme-bg, #222); color: var(--theme-color, #eee); margin: 5% auto; padding: 20px; border-radius: 10px; width: 90%; max-width: 1200px; position: relative; border: 1px solid rgba(128,128,128,.3); box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
+#fd-modal { display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.8); backdrop-filter: blur(5px); overflow: auto; opacity: 0; transition: opacity 0.3s ease; }
+#fd-modal.fd-modal-show { opacity: 1; }
+#fd-modal-content { background: var(--theme-bg, #222); color: var(--theme-color, #eee); margin: 5% auto; padding: 20px; border-radius: 10px; width: 90%; max-width: 1200px; position: relative; border: 1px solid rgba(128,128,128,.3); box-shadow: 0 5px 15px rgba(0,0,0,0.5); opacity: 0; transform: translateY(-40px); transition: opacity 0.3s ease, transform 0.3s ease; }
+#fd-modal.fd-modal-show #fd-modal-content { opacity: 1; transform: translateY(0); }
+#fd-modal.fd-modal-closing { opacity: 0; }
+#fd-modal.fd-modal-closing #fd-modal-content { opacity: 0; transform: translateY(-40px); }
 #fd-modal-close { position: absolute; right: 20px; top: 15px; font-size: 28px; font-weight: bold; cursor: pointer; opacity: 0.7; }
 #fd-modal-close:hover { opacity: 1; }
 .fd-modal-images { display: flex; flex-wrap: wrap; gap: 20px; margin-top: 20px; justify-content: center; }
-.fd-modal-img-wrap { text-align: center; background: rgba(128,128,128,.1); padding: 15px; border-radius: 8px; border: 1px solid rgba(128,128,128,.3); max-width: 45%; flex-grow: 1; }
+.fd-modal-img-wrap { text-align: center; background: rgba(128,128,128,.1); padding: 15px; border-radius: 8px; border: 1px solid rgba(128,128,128,.3); max-width: 45%; flex-grow: 1; transition: opacity 0.3s ease, transform 0.3s ease, max-width 0.3s ease, padding 0.3s ease, margin 0.3s ease, border-width 0.3s ease, flex-grow 0.3s ease; transform-origin: top center; overflow: hidden; }
+.fd-modal-img-wrap.fd-collapsing { opacity: 0; transform: scale(0.8); max-width: 0; padding-left: 0; padding-right: 0; margin-left: 0; margin-right: 0; border-width: 0; flex-grow: 0.0001; }
 .fd-modal-img-wrap img { max-width: 100%; max-height: 50vh; object-fit: contain; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
 .fd-modal-img-info { margin: 15px 0; font-size: 14px; word-break: break-all; }
 .fd-btn-danger { background: rgba(220, 53, 69, 0.2); border: 1px solid rgba(220, 53, 69, 0.5); color: inherit; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px; transition: 0.2s; }
@@ -89,14 +95,24 @@
 
 .fd-search-bar { display: flex; gap: 10px; margin-bottom: 20px; align-items: center; }
 .fd-search-bar input { padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(128,128,128,.4); background: rgba(128,128,128,.1); color: inherit; flex-grow: 1; max-width: 300px; }
+
+/* Toast Notification */
+.fd-toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 10000; display: flex; flex-direction: column; gap: 10px; }
+.fd-toast { background: rgba(40,167,69,.9); color: white; padding: 12px 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); font-weight: bold; font-size: 14px; opacity: 0; transform: translateY(20px); transition: opacity 0.3s ease, transform 0.3s ease; backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,.2); }
+.fd-toast.fd-toast-show { opacity: 1; transform: translateY(0); }
+
+/* Saved space badge */
+.fd-saved-space-badge { display: inline-block; background: rgba(40,167,69,.2); border: 1px solid rgba(40,167,69,.5); color: inherit; padding: 5px 12px; border-radius: 20px; font-weight: bold; font-size: 14px; margin-left: 15px; vertical-align: middle; }
 </style>
 {/literal}
 
 <div id="fd-main">
 
 <div class="titrePage">
-  <h2>Wyszukiwarka Duplikatów</h2>
+  <h2>Wyszukiwarka Duplikatów <span class="fd-saved-space-badge" id="fd-top-saved-space">Zaoszczędzone miejsce: {$FD_TOTAL_SAVED_SPACE}</span></h2>
 </div>
+
+<div class="fd-toast-container" id="fd-toast-container"></div>
 
 <div class="fd-panel">
   <h3>Stan skanowania galerii</h3>
@@ -275,13 +291,49 @@ function scanChunk() {
 <div class="fd-panel">
   <h3>Znalezione duplikaty</h3>
   {if count($FD_DUPLICATES) > 0}
-    <p>Znaleziono <strong>{$FD_TOTAL_GROUPS}</strong> grup powiązanych zdjęć (łączna liczba zdjęć w grupach: <strong>{$FD_TOTAL_IMAGES_IN_GROUPS}</strong>). Strona {$FD_CURRENT_PAGE} z {$FD_TOTAL_PAGES}.</p>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+      <p style="margin: 0;">Znaleziono <strong>{$FD_TOTAL_GROUPS}</strong> grup powiązanych zdjęć (łączna liczba zdjęć w grupach: <strong>{$FD_TOTAL_IMAGES_IN_GROUPS}</strong>). Strona {$FD_CURRENT_PAGE} z {$FD_TOTAL_PAGES}.</p>
+
+      <div>
+        <label for="fd-sort-select" style="margin-right: 5px;">Sortuj:</label>
+        <select id="fd-sort-select" style="padding: 5px; border-radius: 4px; border: 1px solid rgba(128,128,128,.4); background: rgba(128,128,128,.05); color: inherit;">
+          <option value="default" {if $FD_SORT == 'default'}selected{/if}>Domyślnie</option>
+          <option value="size_desc" {if $FD_SORT == 'size_desc'}selected{/if}>Rozmiar malejąco</option>
+          <option value="size_asc" {if $FD_SORT == 'size_asc'}selected{/if}>Rozmiar rosnąco</option>
+          <option value="count_desc" {if $FD_SORT == 'count_desc'}selected{/if}>Liczba zdjęć malejąco</option>
+          <option value="count_asc" {if $FD_SORT == 'count_asc'}selected{/if}>Liczba zdjęć rosnąco</option>
+          <option value="date_desc" {if $FD_SORT == 'date_desc'}selected{/if}>Od najnowszych</option>
+          <option value="date_asc" {if $FD_SORT == 'date_asc'}selected{/if}>Od najstarszych</option>
+          <option value="alpha_asc" {if $FD_SORT == 'alpha_asc'}selected{/if}>Alfabetycznie A-Z</option>
+          <option value="alpha_desc" {if $FD_SORT == 'alpha_desc'}selected{/if}>Alfabetycznie Z-A</option>
+        </select>
+      </div>
+    </div>
+
+    <script type="text/javascript">
+      document.getElementById('fd-sort-select').addEventListener('change', function() {
+        var actionUrl = "{$FD_ACTION_URL|escape:'javascript'}";
+        var mode = "{$FD_MODE|escape:'javascript'}";
+        var similarity = "{$FD_SIMILARITY|escape:'javascript'}";
+        var sameAlbum = "{$FD_SAME_ALBUM|escape:'javascript'}";
+        var showHidden = "{$FD_SHOW_HIDDEN|escape:'javascript'}";
+        var searchGroup = "{$FD_SEARCH_GROUP|escape:'url'}";
+        var timeInterval = "{$FD_TIME_INTERVAL|escape:'javascript'}";
+        var sortVal = this.value;
+
+        window.location.href = actionUrl + '&fd_mode=' + mode + '&similarity=' + similarity + '&same_album=' + sameAlbum + '&fd_show_hidden=' + showHidden + '&fd_search_group=' + searchGroup + '&fd_time_interval=' + timeInterval + '&sort=' + sortVal;
+      });
+    </script>
     
     <div class="fd-duplicates-list">
       {foreach from=$FD_DUPLICATES item=group}
         <div class="fd-group" data-phash="{$group.PHASH|escape:'html'}" data-title="{$group.TITLE|escape:'html'}" data-images="{$group.IMAGES|@json_encode|escape:'html'}">
-          <h4>{$group.TITLE} <span style="font-size: 11px; opacity: 0.6; font-weight: normal;">({if $FD_MODE == 'time'}Zakres czasu{else}Hash: {$group.PHASH}{/if})</span> <button class="fd-btn" style="float: right; padding: 4px 10px; pointer-events: none;">Otwórz grupę</button></h4>
-          <div style="display: flex; gap: 15px; flex-wrap: wrap; pointer-events: none; opacity: 0.8;">
+          <h4>
+            {$group.TITLE} <span style="font-size: 11px; opacity: 0.6; font-weight: normal;">({if $FD_MODE == 'time'}Zakres czasu{else}Hash: {$group.PHASH}{/if})</span>
+            <button class="fd-btn" style="float: right; padding: 4px 10px; pointer-events: none;">Otwórz grupę</button>
+            <span style="float: right; margin-right: 15px; padding: 4px 10px; background: rgba(128,128,128,0.2); border-radius: 6px; font-size: 13px; font-weight: normal; border: 1px solid rgba(128,128,128,0.4);">Rozmiar: {$group.TOTAL_SIZE|default:'Brak danych'}</span>
+          </h4>
+          <div style="display: flex; gap: 15px; flex-wrap: wrap; pointer-events: none; opacity: 0.8; clear: both; padding-top: 10px;">
             {foreach from=$group.IMAGES item=img}
               <div class="fd-img-wrap" data-id="{$img.ID}">
                 <img src="{$img.PATH}" alt="{$img.NAME}">
@@ -306,19 +358,19 @@ function scanChunk() {
     {if $FD_TOTAL_PAGES > 1}
     <div class="fd-pagination">
       {if $FD_CURRENT_PAGE > 1}
-        <a href="{$FD_ACTION_URL}&fd_mode={$FD_MODE}&similarity={$FD_SIMILARITY}&same_album={$FD_SAME_ALBUM}&fd_show_hidden={$FD_SHOW_HIDDEN}&fd_search_group={$FD_SEARCH_GROUP|escape:'url'}&fd_time_interval={$FD_TIME_INTERVAL}&p={$FD_CURRENT_PAGE-1}">Poprzednia</a>
+        <a href="{$FD_ACTION_URL}&fd_mode={$FD_MODE}&similarity={$FD_SIMILARITY}&same_album={$FD_SAME_ALBUM}&fd_show_hidden={$FD_SHOW_HIDDEN}&fd_search_group={$FD_SEARCH_GROUP|escape:'url'}&fd_time_interval={$FD_TIME_INTERVAL}&sort={$FD_SORT}&p={$FD_CURRENT_PAGE-1}">Poprzednia</a>
       {/if}
       
       {for $p=$FD_START_PAGE to $FD_END_PAGE}
         {if $p == $FD_CURRENT_PAGE}
           <span class="fd-current">{$p}</span>
         {else}
-          <a href="{$FD_ACTION_URL}&fd_mode={$FD_MODE}&similarity={$FD_SIMILARITY}&same_album={$FD_SAME_ALBUM}&fd_show_hidden={$FD_SHOW_HIDDEN}&fd_search_group={$FD_SEARCH_GROUP|escape:'url'}&fd_time_interval={$FD_TIME_INTERVAL}&p={$p}">{$p}</a>
+          <a href="{$FD_ACTION_URL}&fd_mode={$FD_MODE}&similarity={$FD_SIMILARITY}&same_album={$FD_SAME_ALBUM}&fd_show_hidden={$FD_SHOW_HIDDEN}&fd_search_group={$FD_SEARCH_GROUP|escape:'url'}&fd_time_interval={$FD_TIME_INTERVAL}&sort={$FD_SORT}&p={$p}">{$p}</a>
         {/if}
       {/for}
       
       {if $FD_CURRENT_PAGE < $FD_TOTAL_PAGES}
-        <a href="{$FD_ACTION_URL}&fd_mode={$FD_MODE}&similarity={$FD_SIMILARITY}&same_album={$FD_SAME_ALBUM}&fd_show_hidden={$FD_SHOW_HIDDEN}&fd_search_group={$FD_SEARCH_GROUP|escape:'url'}&fd_time_interval={$FD_TIME_INTERVAL}&p={$FD_CURRENT_PAGE+1}">Następna</a>
+        <a href="{$FD_ACTION_URL}&fd_mode={$FD_MODE}&similarity={$FD_SIMILARITY}&same_album={$FD_SAME_ALBUM}&fd_show_hidden={$FD_SHOW_HIDDEN}&fd_search_group={$FD_SEARCH_GROUP|escape:'url'}&fd_time_interval={$FD_TIME_INTERVAL}&sort={$FD_SORT}&p={$FD_CURRENT_PAGE+1}">Następna</a>
       {/if}
     </div>
     {/if}
@@ -362,15 +414,59 @@ function scanChunk() {
     });
   });
 
+  // Format Bytes Helper for JS
+  function formatBytes(bytes) {
+    if (bytes >= 1048576) {
+      return (bytes / 1048576).toFixed(2) + ' MB';
+    } else if (bytes >= 1024) {
+      return (bytes / 1024).toFixed(2) + ' KB';
+    }
+    return bytes + ' B';
+  }
+
+  // Toast Helper
+  function showToast(message) {
+    var container = document.getElementById('fd-toast-container');
+    var toast = document.createElement('div');
+    toast.className = 'fd-toast';
+    toast.innerText = message;
+    container.appendChild(toast);
+
+    // Animate in
+    requestAnimationFrame(function() {
+      requestAnimationFrame(function() {
+        toast.classList.add('fd-toast-show');
+      });
+    });
+
+    // Remove after 4 seconds
+    setTimeout(function() {
+      toast.classList.remove('fd-toast-show');
+      setTimeout(function() {
+        if(toast.parentNode) toast.parentNode.removeChild(toast);
+      }, 300);
+    }, 4000);
+  }
+
   // Zamykanie modala
   closeBtn.addEventListener('click', function() {
-    modal.style.display = 'none';
+    closeModal();
   });
   window.addEventListener('click', function(e) {
     if (e.target == modal) {
-      modal.style.display = 'none';
+      closeModal();
     }
   });
+
+  function closeModal(onComplete) {
+    modal.classList.remove('fd-modal-show');
+    modal.classList.add('fd-modal-closing');
+    setTimeout(function() {
+      modal.style.display = 'none';
+      modal.classList.remove('fd-modal-closing');
+      if (typeof onComplete === 'function') onComplete();
+    }, 300); // Wait for transition
+  }
 
   function openModal(title, phash, images, groupEl) {
     document.getElementById('fd-modal-title').innerText = title + ' (Hash: ' + phash + ')';
@@ -396,6 +492,9 @@ function scanChunk() {
       var info = document.createElement('div');
       info.className = 'fd-modal-img-info';
 
+      var creationDate = img.DATE_CREATION ? img.DATE_CREATION : 'Nieznana';
+      var fileSize = img.FILE_SIZE ? img.FILE_SIZE : 'Brak danych';
+
       var albumsHtml = '';
       if (img.ALBUMS) {
          albumsHtml = '<strong>Albumy:</strong><ul>';
@@ -405,9 +504,13 @@ function scanChunk() {
          albumsHtml += '</ul>';
       }
 
-      var gpsHtml = (img.HAS_GPS == 1) ? '<span style="color:#5cb85c; font-weight:bold;">📍 Zdjęcie posiada dane GPS</span><br><br>' : '';
+      var gpsHtml = (img.HAS_GPS == 1) ? '<span style="color:#5cb85c; font-weight:bold;">📍 Zdjęcie posiada dane GPS</span><br>' : '';
 
-      info.innerHTML = 'ID: ' + img.ID + '<br>' + img.FILE + '<br><br>' + gpsHtml + albumsHtml;
+      info.innerHTML = 'ID: ' + img.ID + '<br>' +
+                       'Plik: ' + img.FILE + '<br>' +
+                       'Data utworzenia: ' + creationDate + '<br>' +
+                       'Rozmiar: ' + fileSize + '<br><br>' +
+                       gpsHtml + albumsHtml;
 
       var delBtn = document.createElement('button');
       delBtn.className = 'fd-btn-danger';
@@ -435,7 +538,16 @@ function scanChunk() {
       container.appendChild(wrap);
     });
 
+    // Reset classes and show
+    modal.classList.remove('fd-modal-closing');
     modal.style.display = 'block';
+
+    // Request animation frame to ensure transition plays
+    requestAnimationFrame(function() {
+      requestAnimationFrame(function() {
+        modal.classList.add('fd-modal-show');
+      });
+    });
   }
 
   function toggleFavorite(imageId, btnEl, imgObj, groupEl) {
@@ -493,29 +605,53 @@ function scanChunk() {
       .then(response => response.json())
       .then(data => {
         if (data.status === 'ok') {
-          // Remove visually
-          wrapEl.style.opacity = '0.3';
           btn.innerHTML = 'Usunięto';
 
-          // Update JSON data on the group DOM element so if we reopen modal, it's correct
-          var imagesJson = groupEl.getAttribute('data-images');
-          if (imagesJson) {
-            var images = JSON.parse(imagesJson);
-            var updatedImages = images.filter(function(img) { return img.ID != imageId; });
-            groupEl.setAttribute('data-images', JSON.stringify(updatedImages));
+          // Format bytes for toast
+          var deletedFormatted = formatBytes(data.deleted_bytes || 0);
+          var totalFormatted = formatBytes(data.total_saved_bytes || 0);
 
-            // Hide from the main list behind the modal
-            var mainListImgWrap = groupEl.querySelector('.fd-img-wrap[data-id="' + imageId + '"]');
-            if (mainListImgWrap) {
-              mainListImgWrap.style.display = 'none';
-            }
+          // Update top counter
+          document.getElementById('fd-top-saved-space').innerText = 'Zaoszczędzone miejsce: ' + totalFormatted;
 
-            // If only 1 image left, hide the entire group and close modal
-            if (updatedImages.length <= 1) {
-              groupEl.style.display = 'none';
-              modal.style.display = 'none';
-            }
+          // Show toast
+          if ((data.deleted_bytes || 0) > 0) {
+            showToast('Zaoszczędzono: ' + deletedFormatted + ' (Łącznie: ' + totalFormatted + ')');
           }
+
+          // Trigger collapse animation
+          wrapEl.classList.add('fd-collapsing');
+
+          setTimeout(function() {
+            // Remove DOM element completely after transition
+            if (wrapEl.parentNode) {
+              wrapEl.parentNode.removeChild(wrapEl);
+            }
+
+            // Update JSON data on the group DOM element so if we reopen modal, it's correct
+            var imagesJson = groupEl.getAttribute('data-images');
+            if (imagesJson) {
+              var images = JSON.parse(imagesJson);
+              var updatedImages = images.filter(function(img) { return img.ID != imageId; });
+              groupEl.setAttribute('data-images', JSON.stringify(updatedImages));
+
+              // Hide from the main list behind the modal
+              var mainListImgWrap = groupEl.querySelector('.fd-img-wrap[data-id="' + imageId + '"]');
+              if (mainListImgWrap) {
+                mainListImgWrap.style.display = 'none';
+              }
+
+              // If only 1 image left, close modal then fade out group
+              if (updatedImages.length <= 1) {
+                closeModal(function() {
+                  groupEl.classList.add('fd-fading-out');
+                  setTimeout(function() {
+                    groupEl.style.display = 'none';
+                  }, 300);
+                });
+              }
+            }
+          }, 300); // Wait for collapsing to finish
         } else {
           alert('Błąd usuwania: ' + (data.error || 'Nieznany błąd'));
           btn.innerHTML = originalText;

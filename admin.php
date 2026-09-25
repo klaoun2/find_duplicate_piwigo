@@ -68,6 +68,16 @@ if (isset($_GET['action']) && $_GET['action'] == 'scan')
   die();
 }
 
+// Helper: format bytes
+function find_duplicates_format_bytes($bytes) {
+  if ($bytes >= 1048576) {
+    return number_format($bytes / 1048576, 2) . ' MB';
+  } elseif ($bytes >= 1024) {
+    return number_format($bytes / 1024, 2) . ' KB';
+  }
+  return $bytes . ' B';
+}
+
 // Handle AJAX image deletion
 if (isset($_GET['action']) && $_GET['action'] == 'delete_image') {
   check_pwg_token();
