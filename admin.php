@@ -61,6 +61,16 @@ if (isset($_GET['action']) && $_GET['action'] == 'scan')
   die();
 }
 
+// Helper: format bytes
+function find_duplicates_format_bytes($bytes) {
+  if ($bytes >= 1048576) {
+    return number_format($bytes / 1048576, 2) . ' MB';
+  } elseif ($bytes >= 1024) {
+    return number_format($bytes / 1024, 2) . ' KB';
+  }
+  return $bytes . ' B';
+}
+
 // Handle AJAX image deletion
 if (isset($_GET['action']) && $_GET['action'] == 'delete_image') {
   check_pwg_token();
@@ -72,6 +82,17 @@ if (isset($_GET['action']) && $_GET['action'] == 'delete_image') {
 
   $image_id = (int)$_GET['image_id'];
 
+  // Zapisanie rozmiaru pliku przed usunięciem
+  $file_size = 0;
+  $query = 'SELECT path FROM ' . IMAGES_TABLE . ' WHERE id = ' . $image_id;
+  $result = pwg_query($query);
+  if ($row = pwg_db_fetch_assoc($result)) {
+    $abs_path = PHPWG_ROOT_PATH . $row['path'];
+    if (file_exists($abs_path)) {
+      $file_size = filesize($abs_path);
+    }
+  }
+
   // Usunięcie zdjęcia korzystając z funkcji Piwigo
   include_once(PHPWG_ROOT_PATH . 'admin/include/functions.php');
   if (function_exists('delete_elements')) {
@@ -82,8 +103,15 @@ if (isset($_GET['action']) && $_GET['action'] == 'delete_image') {
     pwg_query('DELETE FROM ' . FIND_DUPLICATES_TABLE . ' WHERE image_id = ' . $image_id);
   }
 
-  // Odświeżenie Cache w locie
+  // Odświeżenie Cache w locie i zapisanie zaoszczędzonego miejsca
   global $conf;
+
+  $saved_space = isset($conf['find_duplicates_saved_space']) ? (int)$conf['find_duplicates_saved_space'] : 0;
+  if ($file_size > 0) {
+    $saved_space += $file_size;
+    conf_update_param('find_duplicates_saved_space', $saved_space);
+  }
+
   $cache_dir = PHPWG_ROOT_PATH . '_data/find_duplicates_cache';
   $similarity_limit = isset($conf['find_duplicates_similarity']) ? (int)$conf['find_duplicates_similarity'] : 100;
   $same_album = isset($conf['find_duplicates_same_album']) ? (int)$conf['find_duplicates_same_album'] : 0;
@@ -98,8 +126,8 @@ if (isset($_GET['action']) && $_GET['action'] == 'delete_image') {
 
   // Odczytujemy stary plik (przed usunięciem), gdzie zahashowanych było o 1 więcej
   $old_hashed_images = $current_hashed_images + 1;
-  $old_cache_filename = $cache_dir . '/cache_s' . $similarity_limit . '_a' . $same_album . '_h' . $old_hashed_images . '.json';
-  $new_cache_filename = $cache_dir . '/cache_s' . $similarity_limit . '_a' . $same_album . '_h' . $current_hashed_images . '.json';
+  $old_cache_filename = $cache_dir . '/cache_v5_s' . $similarity_limit . '_a' . $same_album . '_h' . $old_hashed_images . '.json';
+  $new_cache_filename = $cache_dir . '/cache_v5_s' . $similarity_limit . '_a' . $same_album . '_h' . $current_hashed_images . '.json';
 
   if (file_exists($old_cache_filename)) {
     $cached_data = @file_get_contents($old_cache_filename);
@@ -109,15 +137,37 @@ if (isset($_GET['action']) && $_GET['action'] == 'delete_image') {
 
       foreach ($duplicates as $group) {
         $filtered_images = array();
+        $group_total_bytes = 0;
+        $oldest_date = null;
+
         foreach ($group['IMAGES'] as $img) {
           if ($img['ID'] != $image_id) {
             $filtered_images[] = $img;
+            if (isset($img['FILE_SIZE_BYTES'])) {
+              $group_total_bytes += $img['FILE_SIZE_BYTES'];
+            }
+            if (!empty($img['DATE_CREATION'])) {
+              $ts = strtotime($img['DATE_CREATION']);
+              if ($ts !== false) {
+                if ($oldest_date === null || $ts < $oldest_date) {
+                  $oldest_date = $ts;
+                }
+              }
+            }
           }
         }
 
         // Zostawiamy grupę, tylko jeśli zostało w niej więcej niż 1 zdjęcie
         if (count($filtered_images) > 1) {
           $group['IMAGES'] = $filtered_images;
+          $group['TOTAL_SIZE_BYTES'] = $group_total_bytes;
+          $group['OLDEST_DATE_TS'] = $oldest_date;
+
+          // Helper: format bytes - upewnijmy się że funkcja jest dostępna wyżej
+          if (function_exists('find_duplicates_format_bytes')) {
+             $group['TOTAL_SIZE'] = find_duplicates_format_bytes($group_total_bytes);
+          }
+
           $new_duplicates[] = $group;
         }
       }
@@ -128,7 +178,12 @@ if (isset($_GET['action']) && $_GET['action'] == 'delete_image') {
     }
   }
 
-  echo json_encode(array('status' => 'ok', 'message' => 'Image deleted and cache updated.'));
+  echo json_encode(array(
+    'status' => 'ok',
+    'message' => 'Image deleted and cache updated.',
+    'deleted_bytes' => $file_size,
+    'total_saved_bytes' => $saved_space
+  ));
   die();
 }
 
@@ -167,6 +222,9 @@ if (isset($_GET['similarity'])) {
 $current_page_idx = isset($_GET['p']) ? max(1, (int)$_GET['p']) : 1;
 $items_per_page = 20;
 
+$saved_space = isset($conf['find_duplicates_saved_space']) ? (int)$conf['find_duplicates_saved_space'] : 0;
+$saved_space_formatted = find_duplicates_format_bytes($saved_space);
+
 // Default Page View Data
 $total_query = 'SELECT COUNT(id) AS c FROM ' . IMAGES_TABLE;
 $total_row = pwg_db_fetch_assoc(pwg_query($total_query));
@@ -191,7 +249,8 @@ if ($hashed_images > 0 && $hashed_images >= $total_images)
   
   // Cache key is based on settings AND the number of hashed images. 
   // If images are added or removed, the hashed_images count changes, invalidating cache.
-  $cache_filename = $cache_dir . '/cache_s' . $similarity_limit . '_a' . $same_album . '_h' . $hashed_images . '.json';
+  // Added _v5 to force invalidate old caches missing the sorting keys.
+  $cache_filename = $cache_dir . '/cache_v5_s' . $similarity_limit . '_a' . $same_album . '_h' . $hashed_images . '.json';
   
   if (file_exists($cache_filename)) {
     // Load from cache
@@ -206,7 +265,7 @@ if ($hashed_images > 0 && $hashed_images >= $total_images)
     $max_diff = round((100 - $similarity_limit) / 100 * 64);
     
     $query = '
-      SELECT i.id, i.path, i.name, i.file, h.phash, ic.category_id, c.name as cat_name
+      SELECT i.id, i.path, i.name, i.file, i.date_creation, i.latitude, i.longitude, h.phash, ic.category_id, c.name as cat_name
       FROM ' . FIND_DUPLICATES_TABLE . ' h
       INNER JOIN ' . IMAGES_TABLE . ' i ON h.image_id = i.id
       LEFT JOIN ' . IMAGE_CATEGORY_TABLE . ' ic ON i.id = ic.image_id
@@ -220,6 +279,24 @@ if ($hashed_images > 0 && $hashed_images >= $total_images)
     {
       $img_id = $row['id'];
       if (!isset($images_data[$img_id])) {
+        // Calculate filesize
+        $file_path_abs = PHPWG_ROOT_PATH . $row['path'];
+        $filesize_str = 'Brak danych';
+        $bytes = 0;
+        if (file_exists($file_path_abs)) {
+          $bytes = filesize($file_path_abs);
+          if ($bytes >= 1048576) {
+            $filesize_str = number_format($bytes / 1048576, 2) . ' MB';
+          } elseif ($bytes >= 1024) {
+            $filesize_str = number_format($bytes / 1024, 2) . ' KB';
+          } else {
+            $filesize_str = $bytes . ' B';
+          }
+        }
+
+        // Location
+        $has_location = (!empty($row['latitude']) && !empty($row['longitude'])) ? 'Tak' : 'Nie';
+
         $images_data[$img_id] = array(
           'ID' => $row['id'],
           'PATH' => $row['path'],
@@ -227,6 +304,10 @@ if ($hashed_images > 0 && $hashed_images >= $total_images)
           'NAME' => $row['name'] ? $row['name'] : $row['file'],
           'URL' => get_root_url() . 'admin.php?page=photo-' . $row['id'],
           'PHASH' => $row['phash'],
+          'DATE_CREATION' => $row['date_creation'],
+          'FILE_SIZE' => $filesize_str,
+          'FILE_SIZE_BYTES' => $bytes,
+          'HAS_LOCATION' => $has_location,
           'ALBUMS' => array()
         );
       }
@@ -277,9 +358,24 @@ if ($hashed_images > 0 && $hashed_images >= $total_images)
       $group_images = array();
       $album_name = 'Nieznany album';
       $lead_hash = '';
+      $group_total_bytes = 0;
+      $oldest_date = null;
       
       foreach ($group_ids as $idx => $id) {
-        $group_images[] = $images_data[$id];
+        $img_data = $images_data[$id];
+        $img_data['ALBUMS_COUNT'] = count($img_data['ALBUMS']);
+        $group_total_bytes += $img_data['FILE_SIZE_BYTES'];
+
+        if (!empty($img_data['DATE_CREATION'])) {
+          $ts = strtotime($img_data['DATE_CREATION']);
+          if ($ts !== false) {
+            if ($oldest_date === null || $ts < $oldest_date) {
+              $oldest_date = $ts;
+            }
+          }
+        }
+
+        $group_images[] = $img_data;
         if ($idx === 0) {
           $lead_hash = $images_data[$id]['PHASH'];
           if (!empty($images_data[$id]['ALBUMS'])) {
@@ -299,6 +395,9 @@ if ($hashed_images > 0 && $hashed_images >= $total_images)
       $duplicates[] = array(
         'PHASH' => $lead_hash . ($max_diff > 0 ? ' (~' . $similarity_limit . '%)' : ''),
         'TITLE' => $group_title,
+        'TOTAL_SIZE' => find_duplicates_format_bytes($group_total_bytes),
+        'TOTAL_SIZE_BYTES' => $group_total_bytes,
+        'OLDEST_DATE_TS' => $oldest_date,
         'IMAGES' => $group_images
       );
     }
@@ -310,7 +409,47 @@ if ($hashed_images > 0 && $hashed_images >= $total_images)
     }
     @file_put_contents($cache_filename, json_encode($duplicates));
   }
+
+  // Sort Logic
+  $sort_opt = isset($_GET['sort']) ? $_GET['sort'] : 'default';
+
+  if ($sort_opt !== 'default') {
+    usort($duplicates, function($a, $b) use ($sort_opt) {
+      switch ($sort_opt) {
+        case 'size_desc':
+          return $b['TOTAL_SIZE_BYTES'] <=> $a['TOTAL_SIZE_BYTES'];
+        case 'size_asc':
+          return $a['TOTAL_SIZE_BYTES'] <=> $b['TOTAL_SIZE_BYTES'];
+        case 'count_desc':
+          return count($b['IMAGES']) <=> count($a['IMAGES']);
+        case 'count_asc':
+          return count($a['IMAGES']) <=> count($b['IMAGES']);
+        case 'date_asc':
+        case 'date_desc':
+          // Handle missing dates (null) by placing them at the end
+          $dateA = isset($a['OLDEST_DATE_TS']) ? $a['OLDEST_DATE_TS'] : null;
+          $dateB = isset($b['OLDEST_DATE_TS']) ? $b['OLDEST_DATE_TS'] : null;
+
+          if ($dateA === null && $dateB === null) return 0;
+          if ($dateA === null) return 1;
+          if ($dateB === null) return -1;
+
+          if ($sort_opt === 'date_desc') {
+            return $dateB <=> $dateA;
+          }
+          return $dateA <=> $dateB;
+        case 'alpha_asc':
+          return strcasecmp($a['TITLE'], $b['TITLE']);
+        case 'alpha_desc':
+          return strcasecmp($b['TITLE'], $a['TITLE']);
+        default:
+          return 0;
+      }
+    });
+  }
 }
+
+$sort_opt_clean = isset($_GET['sort']) ? htmlspecialchars($_GET['sort']) : 'default';
 
 // Pagination logic
 $total_duplicates_groups = count($duplicates);
@@ -342,6 +481,8 @@ $template->assign(array(
   'FD_PAGE_NAME' => isset($_GET['page']) ? $_GET['page'] : 'plugin-' . FIND_DUPLICATES_ID,
   'FD_SIMILARITY' => $similarity_limit,
   'FD_SAME_ALBUM' => $same_album,
+  'FD_TOTAL_SAVED_SPACE' => $saved_space_formatted,
+  'FD_SORT' => $sort_opt_clean,
 ));
 
 $template->set_filenames(array('plugin_admin_content' => FIND_DUPLICATES_PATH . 'admin.tpl'));
