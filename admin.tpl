@@ -38,6 +38,22 @@
 #fd-main input[type=range] { vertical-align: middle; }
 #fd-main .fd-warning { color: #d9534f; font-size: 13px; font-weight: bold; display: none; margin-top: 5px; }
 
+#fd-main .fd-group { cursor: pointer; transition: background 0.2s; }
+#fd-main .fd-group:hover { background: rgba(128,128,128,.1) !important; }
+
+/* Modal CSS */
+#fd-modal { display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.8); backdrop-filter: blur(5px); overflow: auto; }
+#fd-modal-content { background: var(--theme-bg, #222); color: var(--theme-color, #eee); margin: 5% auto; padding: 20px; border-radius: 10px; width: 90%; max-width: 1200px; position: relative; border: 1px solid rgba(128,128,128,.3); box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
+#fd-modal-close { position: absolute; right: 20px; top: 15px; font-size: 28px; font-weight: bold; cursor: pointer; opacity: 0.7; }
+#fd-modal-close:hover { opacity: 1; }
+.fd-modal-images { display: flex; flex-wrap: wrap; gap: 20px; margin-top: 20px; justify-content: center; }
+.fd-modal-img-wrap { text-align: center; background: rgba(128,128,128,.1); padding: 15px; border-radius: 8px; border: 1px solid rgba(128,128,128,.3); max-width: 45%; flex-grow: 1; }
+.fd-modal-img-wrap img { max-width: 100%; max-height: 50vh; object-fit: contain; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+.fd-modal-img-info { margin: 15px 0; font-size: 14px; word-break: break-all; }
+.fd-btn-danger { background: rgba(220, 53, 69, 0.2); border: 1px solid rgba(220, 53, 69, 0.5); color: inherit; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px; transition: 0.2s; }
+.fd-btn-danger:hover { background: rgba(220, 53, 69, 0.5); }
+.fd-btn-danger:disabled { opacity: 0.5; cursor: not-allowed; }
+
 #fd-main .fd-pagination { display: flex; justify-content: center; gap: 10px; padding: 20px 0; align-items: center; }
 #fd-main .fd-pagination a, #fd-main .fd-pagination span { 
   padding: 8px 12px; 
@@ -181,18 +197,12 @@ function scanChunk() {
     
     <div class="fd-duplicates-list">
       {foreach from=$FD_DUPLICATES item=group}
-        <div class="fd-group">
-          <h4>{$group.TITLE} <span style="font-size: 11px; opacity: 0.6; font-weight: normal;">(Hash: {$group.PHASH})</span></h4>
-          <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+        <div class="fd-group" data-phash="{$group.PHASH|escape:'html'}" data-title="{$group.TITLE|escape:'html'}" data-images="{$group.IMAGES|@json_encode|escape:'html'}">
+          <h4>{$group.TITLE} <span style="font-size: 11px; opacity: 0.6; font-weight: normal;">(Hash: {$group.PHASH})</span> <button class="fd-btn" style="float: right; padding: 4px 10px; pointer-events: none;">Otwórz grupę</button></h4>
+          <div style="display: flex; gap: 15px; flex-wrap: wrap; pointer-events: none; opacity: 0.8;">
             {foreach from=$group.IMAGES item=img}
               <div class="fd-img-wrap">
-                <a href="{$img.URL}" target="_blank">
-                  <img src="{$img.PATH}" alt="{$img.NAME}">
-                </a>
-                <div class="fd-img-info">
-                  ID: {$img.ID}<br>
-                  {$img.FILE}
-                </div>
+                <img src="{$img.PATH}" alt="{$img.NAME}">
               </div>
             {/foreach}
           </div>
@@ -227,3 +237,125 @@ function scanChunk() {
 {/if}
 
 </div> <!-- /#fd-main -->
+
+<!-- Modal -->
+<div id="fd-modal">
+  <div id="fd-modal-content">
+    <span id="fd-modal-close">&times;</span>
+    <h3 id="fd-modal-title" style="margin-top: 0; border-bottom: 1px solid rgba(128,128,128,.3); padding-bottom: 10px;">Grupa</h3>
+    <div class="fd-modal-images" id="fd-modal-images">
+      <!-- Images will be injected here via JS -->
+    </div>
+  </div>
+</div>
+
+<script type="text/javascript">
+(function(){
+  var modal = document.getElementById('fd-modal');
+  var closeBtn = document.getElementById('fd-modal-close');
+  var groups = document.querySelectorAll('.fd-group');
+
+  // Otwieranie modala
+  groups.forEach(function(groupEl) {
+    groupEl.addEventListener('click', function() {
+      var title = groupEl.getAttribute('data-title');
+      var phash = groupEl.getAttribute('data-phash');
+      var imagesJson = groupEl.getAttribute('data-images');
+
+      if(imagesJson) {
+        var images = JSON.parse(imagesJson);
+        openModal(title, phash, images, groupEl);
+      }
+    });
+  });
+
+  // Zamykanie modala
+  closeBtn.addEventListener('click', function() {
+    modal.style.display = 'none';
+  });
+  window.addEventListener('click', function(e) {
+    if (e.target == modal) {
+      modal.style.display = 'none';
+    }
+  });
+
+  function openModal(title, phash, images, groupEl) {
+    document.getElementById('fd-modal-title').innerText = title + ' (Hash: ' + phash + ')';
+    var container = document.getElementById('fd-modal-images');
+    container.innerHTML = '';
+
+    images.forEach(function(img) {
+      var wrap = document.createElement('div');
+      wrap.className = 'fd-modal-img-wrap';
+      wrap.id = 'fd-modal-img-' + img.ID;
+
+      var link = document.createElement('a');
+      link.href = img.URL;
+      link.target = '_blank';
+
+      var image = document.createElement('img');
+      image.src = img.PATH;
+      image.alt = img.NAME;
+
+      link.appendChild(image);
+      wrap.appendChild(link);
+
+      var info = document.createElement('div');
+      info.className = 'fd-modal-img-info';
+      info.innerHTML = 'ID: ' + img.ID + '<br>' + img.FILE + '<br><br>';
+
+      var delBtn = document.createElement('button');
+      delBtn.className = 'fd-btn-danger';
+      delBtn.innerHTML = 'Usuń zdjęcie';
+      delBtn.onclick = function() {
+        if(confirm('Czy na pewno chcesz bezpowrotnie usunąć to zdjęcie (ID: ' + img.ID + ')?')) {
+          deleteImage(img.ID, phash, wrap, groupEl);
+        }
+      };
+
+      info.appendChild(delBtn);
+      wrap.appendChild(info);
+      container.appendChild(wrap);
+    });
+
+    modal.style.display = 'block';
+  }
+
+  function deleteImage(imageId, groupPhash, wrapEl, groupEl) {
+    var btn = wrapEl.querySelector('.fd-btn-danger');
+    var originalText = btn.innerHTML;
+    btn.innerHTML = 'Usuwanie...';
+    btn.disabled = true;
+
+    var url = actionUrl + '&action=delete_image&image_id=' + imageId + '&pwg_token=' + pwgToken;
+
+    fetch(url)
+      .then(response => response.json())
+      .then(data => {
+        if (data.status === 'ok') {
+          // Remove visually
+          wrapEl.style.opacity = '0.3';
+          btn.innerHTML = 'Usunięto';
+
+          // Update JSON data on the group DOM element so if we reopen modal, it's correct
+          var imagesJson = groupEl.getAttribute('data-images');
+          if (imagesJson) {
+            var images = JSON.parse(imagesJson);
+            var updatedImages = images.filter(function(img) { return img.ID != imageId; });
+            groupEl.setAttribute('data-images', JSON.stringify(updatedImages));
+          }
+        } else {
+          alert('Błąd usuwania: ' + (data.error || 'Nieznany błąd'));
+          btn.innerHTML = originalText;
+          btn.disabled = false;
+        }
+      })
+      .catch(error => {
+        console.error('Error deleting image:', error);
+        alert('Wystąpił błąd komunikacji z serwerem.');
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+      });
+  }
+})();
+</script>
