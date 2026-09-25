@@ -73,17 +73,18 @@
 .fd-tab:hover:not(.active) { background: rgba(128,128,128,.2); }
 
 .fd-favorite-btn {
-  background: none;
+  background: rgba(255,193,7,0.1);
   border: 1px solid rgba(255,193,7,0.5);
   color: #ffc107;
   cursor: pointer;
-  padding: 5px 10px;
-  border-radius: 4px;
-  font-size: 14px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 18px;
   margin-top: 5px;
   transition: 0.2s;
+  line-height: 1;
 }
-.fd-favorite-btn.active { background: rgba(255,193,7,0.2); font-weight: bold; }
+.fd-favorite-btn.active { background: rgba(255,193,7,0.3); font-weight: bold; text-shadow: 0 0 5px rgba(255,193,7,0.5); }
 .fd-favorite-btn:hover { background: rgba(255,193,7,0.4); }
 
 .fd-search-bar { display: flex; gap: 10px; margin-bottom: 20px; align-items: center; }
@@ -274,7 +275,7 @@ function scanChunk() {
 <div class="fd-panel">
   <h3>Znalezione duplikaty</h3>
   {if count($FD_DUPLICATES) > 0}
-    <p>Znaleziono {$FD_TOTAL_GROUPS} grup powiązanych zdjęć. Strona {$FD_CURRENT_PAGE} z {$FD_TOTAL_PAGES}.</p>
+    <p>Znaleziono <strong>{$FD_TOTAL_GROUPS}</strong> grup powiązanych zdjęć (łączna liczba zdjęć w grupach: <strong>{$FD_TOTAL_IMAGES_IN_GROUPS}</strong>). Strona {$FD_CURRENT_PAGE} z {$FD_TOTAL_PAGES}.</p>
     
     <div class="fd-duplicates-list">
       {foreach from=$FD_DUPLICATES item=group}
@@ -284,8 +285,16 @@ function scanChunk() {
             {foreach from=$group.IMAGES item=img}
               <div class="fd-img-wrap" data-id="{$img.ID}">
                 <img src="{$img.PATH}" alt="{$img.NAME}">
+                <div style="position: absolute; bottom: 5px; right: 5px; display: flex; gap: 3px;">
+                  {if $img.ALBUM_COUNT|default:0 > 1}
+                    <span style="background: rgba(0,0,0,0.6); color: white; padding: 2px 5px; border-radius: 4px; font-size: 10px;" title="Należy do wielu albumów">📁 {$img.ALBUM_COUNT}</span>
+                  {/if}
+                  {if $img.HAS_GPS|default:0}
+                    <span style="background: rgba(0,0,0,0.6); color: white; padding: 2px 5px; border-radius: 4px; font-size: 10px;" title="Posiada lokalizację GPS">📍</span>
+                  {/if}
+                </div>
                 {if $img.IS_FAVORITE}
-                <div style="color: #ffc107; font-size: 18px; position: absolute; margin-top: -30px; margin-left: 5px; text-shadow: 1px 1px 2px #000;">★</div>
+                <div style="color: #ffc107; font-size: 24px; position: absolute; top: -5px; left: 5px; text-shadow: 1px 1px 3px rgba(0,0,0,0.8);">★</div>
                 {/if}
               </div>
             {/foreach}
@@ -386,7 +395,19 @@ function scanChunk() {
 
       var info = document.createElement('div');
       info.className = 'fd-modal-img-info';
-      info.innerHTML = 'ID: ' + img.ID + '<br>' + img.FILE + '<br><br>';
+
+      var albumsHtml = '';
+      if (img.ALBUMS) {
+         albumsHtml = '<strong>Albumy:</strong><ul>';
+         for (var cat_id in img.ALBUMS) {
+            albumsHtml += '<li>' + img.ALBUMS[cat_id] + '</li>';
+         }
+         albumsHtml += '</ul>';
+      }
+
+      var gpsHtml = (img.HAS_GPS == 1) ? '<span style="color:#5cb85c; font-weight:bold;">📍 Zdjęcie posiada dane GPS</span><br><br>' : '';
+
+      info.innerHTML = 'ID: ' + img.ID + '<br>' + img.FILE + '<br><br>' + gpsHtml + albumsHtml;
 
       var delBtn = document.createElement('button');
       delBtn.className = 'fd-btn-danger';
@@ -400,7 +421,8 @@ function scanChunk() {
       var favBtn = document.createElement('button');
       var isFav = img.IS_FAVORITE == 1;
       favBtn.className = 'fd-favorite-btn ' + (isFav ? 'active' : '');
-      favBtn.innerHTML = isFav ? '★ Ulubione' : '☆ Ulubione';
+      favBtn.innerHTML = isFav ? '★' : '☆';
+      favBtn.title = 'Zaznacz/odznacz jako ulubione';
       favBtn.style.display = 'block';
       favBtn.style.margin = '10px auto';
       favBtn.onclick = function() {
@@ -431,7 +453,7 @@ function scanChunk() {
           imgObj.IS_FAVORITE = data.is_favorite;
 
           btnEl.className = 'fd-favorite-btn ' + (isFav ? 'active' : '');
-          btnEl.innerHTML = isFav ? '★ Ulubione' : '☆ Ulubione';
+          btnEl.innerHTML = isFav ? '★' : '☆';
 
           // Update JSON data on the group DOM element
           var imagesJson = groupEl.getAttribute('data-images');

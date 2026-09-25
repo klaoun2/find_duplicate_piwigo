@@ -159,14 +159,8 @@ if (isset($_GET['action']) && $_GET['action'] == 'toggle_favorite') {
     $new_status = $row['is_favorite'] ? 0 : 1;
     pwg_query('UPDATE ' . FIND_DUPLICATES_TABLE . ' SET is_favorite = ' . $new_status . ' WHERE image_id = ' . $image_id);
 
-    // Invalidate cache immediately when favorite status changes
-    $cache_dir = PHPWG_ROOT_PATH . '_data/find_duplicates_cache';
-    $files = glob($cache_dir . '/*.json');
-    if ($files) {
-      foreach ($files as $file) {
-        @unlink($file);
-      }
-    }
+    // Do NOT invalidate cache anymore!
+    // Favorite status is now injected dynamically during the render phase.
 
     echo json_encode(array('status' => 'ok', 'is_favorite' => $new_status));
   } else {
@@ -252,10 +246,9 @@ if ($hashed_images > 0 && $hashed_images >= $total_images)
     mkdir($cache_dir, 0777, true);
   }
   
-  // Cache key includes mode, interval, and search query to avoid collisions.
-  // Using v3 to force invalidation of old caches and reflect fd_show_hidden param
-  $search_hash = empty($fd_search_group) ? 'none' : md5($fd_search_group);
-  $cache_filename = $cache_dir . '/cache_v3_s' . $similarity_limit . '_a' . $same_album . '_h' . $hashed_images . '_m' . $fd_mode . '_hd' . $fd_show_hidden . '_t' . $fd_time_interval . '_q' . $search_hash . '.json';
+  // Cache key only depends on the heavy grouping parameters.
+  // We use v4 to clear out old caches. Search and hidden flags are applied in-memory.
+  $cache_filename = $cache_dir . '/cache_v4_s' . $similarity_limit . '_a' . $same_album . '_h' . $hashed_images . '_m' . $fd_mode . '_t' . $fd_time_interval . '.json';
   
   if (file_exists($cache_filename)) {
     // Load from cache
@@ -270,7 +263,7 @@ if ($hashed_images > 0 && $hashed_images >= $total_images)
     $max_diff = round((100 - $similarity_limit) / 100 * 64);
     
     $query = '
-      SELECT i.id, i.path, i.name, i.file, i.date_creation, h.phash, h.is_favorite, ic.category_id, c.name as cat_name
+      SELECT i.id, i.path, i.name, i.file, i.date_creation, i.latitude, i.longitude, h.phash, ic.category_id, c.name as cat_name
       FROM ' . FIND_DUPLICATES_TABLE . ' h
       INNER JOIN ' . IMAGES_TABLE . ' i ON h.image_id = i.id
       LEFT JOIN ' . IMAGE_CATEGORY_TABLE . ' ic ON i.id = ic.image_id
@@ -293,7 +286,7 @@ if ($hashed_images > 0 && $hashed_images >= $total_images)
           'URL' => get_root_url() . 'admin.php?page=photo-' . $row['id'],
           'PHASH' => $row['phash'],
           'DATE_CREATION' => $row['date_creation'],
-          'IS_FAVORITE' => $row['is_favorite'],
+          'HAS_GPS' => (!empty($row['latitude']) && !empty($row['longitude'])) ? 1 : 0,
           'ALBUMS' => array()
         );
       }
@@ -378,19 +371,13 @@ if ($hashed_images > 0 && $hashed_images >= $total_images)
       }
     }
     
-    $album_counts = array();
-
     foreach ($groups as $group_ids) {
       $group_images = array();
       $album_name = 'Nieznany album';
       $lead_hash = '';
-      $all_favorites = true;
       
       foreach ($group_ids as $idx => $id) {
         $group_images[] = $images_data[$id];
-        if ($images_data[$id]['IS_FAVORITE'] == 0) {
-          $all_favorites = false;
-        }
         if ($idx === 0) {
           $lead_hash = $images_data[$id]['PHASH'];
           if (!empty($images_data[$id]['ALBUMS'])) {
@@ -399,30 +386,9 @@ if ($hashed_images > 0 && $hashed_images >= $total_images)
         }
       }
       
-      // Filter out groups based on favorites logic
-      if ($fd_show_hidden && !$all_favorites) {
-        continue; // When show_hidden is checked, show ONLY groups where all are favorites
-      }
-      if (!$fd_show_hidden && $all_favorites) {
-        continue; // Normally, hide groups where all are favorites
-      }
-
-      // Filter by group name if search query is provided
-      if (!empty($fd_search_group) && stripos($album_name, $fd_search_group) === false) {
-        continue;
-      }
-
-      if (!isset($album_counts[$album_name])) {
-        $album_counts[$album_name] = 1;
-      } else {
-        $album_counts[$album_name]++;
-      }
-
-      $group_title = $album_name . ' ' . $album_counts[$album_name];
-
       $duplicates[] = array(
         'PHASH' => $lead_hash . ($max_diff > 0 ? ' (~' . $similarity_limit . '%)' : ''),
-        'TITLE' => $group_title,
+        'BASE_ALBUM_NAME' => $album_name,
         'IMAGES' => $group_images
       );
     }
@@ -436,8 +402,78 @@ if ($hashed_images > 0 && $hashed_images >= $total_images)
   }
 }
 
+// ---------------------------------------------------------
+// Filtering Phase (in-memory after loading/generating cache)
+// ---------------------------------------------------------
+
+// 1. Fetch current favorites state from DB to dynamically inject it
+$all_ids = array();
+foreach ($duplicates as $group) {
+  foreach ($group['IMAGES'] as $img) {
+    $all_ids[] = (int)$img['ID'];
+  }
+}
+
+$favorites_map = array();
+if (!empty($all_ids)) {
+  $query = 'SELECT image_id, is_favorite FROM ' . FIND_DUPLICATES_TABLE . ' WHERE is_favorite = 1 AND image_id IN (' . implode(',', $all_ids) . ')';
+  $result = pwg_query($query);
+  while ($row = pwg_db_fetch_assoc($result)) {
+    $favorites_map[$row['image_id']] = true;
+  }
+}
+
+// 2. Apply filtering for Search and Favorites
+$filtered_duplicates = array();
+$album_counts = array();
+$total_images_in_groups = 0;
+
+foreach ($duplicates as $group) {
+  $all_favorites = true;
+  $group_images_updated = array();
+
+  foreach ($group['IMAGES'] as $img) {
+    $img['IS_FAVORITE'] = isset($favorites_map[$img['ID']]) ? 1 : 0;
+    $img['ALBUM_COUNT'] = count($img['ALBUMS']);
+    if ($img['IS_FAVORITE'] == 0) {
+      $all_favorites = false;
+    }
+    $group_images_updated[] = $img;
+  }
+
+  // Filter out groups based on favorites logic
+  if ($fd_show_hidden && !$all_favorites) {
+    continue; // When show_hidden is checked, show ONLY groups where all are favorites
+  }
+  if (!$fd_show_hidden && $all_favorites) {
+    continue; // Normally, hide groups where all are favorites
+  }
+
+  // Filter by group name if search query is provided
+  $album_name = $group['BASE_ALBUM_NAME'];
+  if (!empty($fd_search_group) && stripos($album_name, $fd_search_group) === false) {
+    continue;
+  }
+
+  if (!isset($album_counts[$album_name])) {
+    $album_counts[$album_name] = 1;
+  } else {
+    $album_counts[$album_name]++;
+  }
+
+  $group_title = $album_name . ' ' . $album_counts[$album_name];
+
+  $filtered_duplicates[] = array(
+    'PHASH' => $group['PHASH'],
+    'TITLE' => $group_title,
+    'IMAGES' => $group_images_updated
+  );
+
+  $total_images_in_groups += count($group_images_updated);
+}
+
 // Pagination logic
-$total_duplicates_groups = count($duplicates);
+$total_duplicates_groups = count($filtered_duplicates);
 $total_pages = ceil($total_duplicates_groups / $items_per_page);
 if ($current_page_idx > $total_pages && $total_pages > 0) {
   $current_page_idx = $total_pages;
@@ -446,7 +482,7 @@ if ($current_page_idx > $total_pages && $total_pages > 0) {
 $duplicates_page = array();
 if ($total_duplicates_groups > 0) {
   $offset = ($current_page_idx - 1) * $items_per_page;
-  $duplicates_page = array_slice($duplicates, $offset, $items_per_page);
+  $duplicates_page = array_slice($filtered_duplicates, $offset, $items_per_page);
 }
 
 $start_page = max(1, $current_page_idx - 3);
@@ -455,6 +491,7 @@ $end_page = min($total_pages, $current_page_idx + 3);
 $template->assign(array(
   'FD_DUPLICATES' => $duplicates_page,
   'FD_TOTAL_GROUPS' => $total_duplicates_groups,
+  'FD_TOTAL_IMAGES_IN_GROUPS' => $total_images_in_groups,
   'FD_CURRENT_PAGE' => $current_page_idx,
   'FD_TOTAL_PAGES' => $total_pages,
   'FD_START_PAGE' => $start_page,
