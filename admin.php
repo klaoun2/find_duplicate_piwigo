@@ -257,8 +257,8 @@ if ($hashed_images > 0 && $hashed_images >= $total_images)
   }
   
   // Cache key only depends on the heavy grouping parameters.
-  // We use v6 to force invalidate old caches that lacked file size and date metrics.
-  $cache_filename = $cache_dir . '/cache_v6_s' . $similarity_limit . '_a' . $same_album . '_h' . $hashed_images . '_m' . $fd_mode . '_t' . $fd_time_interval . '.json';
+  // We use v7 to force invalidate old caches that lacked file size and date metrics (fixed implementation).
+  $cache_filename = $cache_dir . '/cache_v7_s' . $similarity_limit . '_a' . $same_album . '_h' . $hashed_images . '_m' . $fd_mode . '_t' . $fd_time_interval . '.json';
   
   if (file_exists($cache_filename)) {
     // Load from cache
@@ -385,9 +385,23 @@ if ($hashed_images > 0 && $hashed_images >= $total_images)
       $group_images = array();
       $album_name = 'Nieznany album';
       $lead_hash = '';
+      $group_total_bytes = 0;
+      $oldest_date = null;
       
       foreach ($group_ids as $idx => $id) {
-        $group_images[] = $images_data[$id];
+        $img_data = $images_data[$id];
+        $group_total_bytes += $img_data['FILE_SIZE_BYTES'];
+
+        if (!empty($img_data['DATE_CREATION'])) {
+          $ts = strtotime($img_data['DATE_CREATION']);
+          if ($ts !== false) {
+            if ($oldest_date === null || $ts < $oldest_date) {
+              $oldest_date = $ts;
+            }
+          }
+        }
+
+        $group_images[] = $img_data;
         if ($idx === 0) {
           $lead_hash = $images_data[$id]['PHASH'];
           if (!empty($images_data[$id]['ALBUMS'])) {
@@ -480,6 +494,42 @@ foreach ($duplicates as $group) {
   );
 
   $total_images_in_groups += count($group_images_updated);
+}
+
+// Sort Logic
+if ($sort_opt !== 'default') {
+  usort($filtered_duplicates, function($a, $b) use ($sort_opt) {
+    switch ($sort_opt) {
+      case 'size_desc':
+        return $b['TOTAL_SIZE_BYTES'] <=> $a['TOTAL_SIZE_BYTES'];
+      case 'size_asc':
+        return $a['TOTAL_SIZE_BYTES'] <=> $b['TOTAL_SIZE_BYTES'];
+      case 'count_desc':
+        return count($b['IMAGES']) <=> count($a['IMAGES']);
+      case 'count_asc':
+        return count($a['IMAGES']) <=> count($b['IMAGES']);
+      case 'date_asc':
+      case 'date_desc':
+        // Handle missing dates (null) by placing them at the end
+        $dateA = isset($a['OLDEST_DATE_TS']) ? $a['OLDEST_DATE_TS'] : null;
+        $dateB = isset($b['OLDEST_DATE_TS']) ? $b['OLDEST_DATE_TS'] : null;
+
+        if ($dateA === null && $dateB === null) return 0;
+        if ($dateA === null) return 1;
+        if ($dateB === null) return -1;
+
+        if ($sort_opt === 'date_desc') {
+          return $dateB <=> $dateA;
+        }
+        return $dateA <=> $dateB;
+      case 'alpha_asc':
+        return strcasecmp($a['TITLE'], $b['TITLE']);
+      case 'alpha_desc':
+        return strcasecmp($b['TITLE'], $a['TITLE']);
+      default:
+        return 0;
+    }
+  });
 }
 
 // Pagination logic
