@@ -257,8 +257,8 @@ if ($hashed_images > 0 && $hashed_images >= $total_images)
   }
   
   // Cache key only depends on the heavy grouping parameters.
-  // We use v7 to force invalidate old caches that lacked file size and date metrics (fixed implementation).
-  $cache_filename = $cache_dir . '/cache_v7_s' . $similarity_limit . '_a' . $same_album . '_h' . $hashed_images . '_m' . $fd_mode . '_t' . $fd_time_interval . '.json';
+  // We use v8 to fix the final metadata caching structure.
+  $cache_filename = $cache_dir . '/cache_v8_s' . $similarity_limit . '_a' . $same_album . '_h' . $hashed_images . '_m' . $fd_mode . '_t' . $fd_time_interval . '.json';
   
   if (file_exists($cache_filename)) {
     // Load from cache
@@ -288,6 +288,21 @@ if ($hashed_images > 0 && $hashed_images >= $total_images)
     {
       $img_id = $row['id'];
       if (!isset($images_data[$img_id])) {
+        // Calculate filesize
+        $file_path_abs = PHPWG_ROOT_PATH . $row['path'];
+        $filesize_str = 'Brak danych';
+        $bytes = 0;
+        if (file_exists($file_path_abs)) {
+          $bytes = filesize($file_path_abs);
+          if ($bytes >= 1048576) {
+            $filesize_str = number_format($bytes / 1048576, 2) . ' MB';
+          } elseif ($bytes >= 1024) {
+            $filesize_str = number_format($bytes / 1024, 2) . ' KB';
+          } else {
+            $filesize_str = $bytes . ' B';
+          }
+        }
+
         $images_data[$img_id] = array(
           'ID' => $row['id'],
           'PATH' => $row['path'],
@@ -297,6 +312,8 @@ if ($hashed_images > 0 && $hashed_images >= $total_images)
           'PHASH' => $row['phash'],
           'DATE_CREATION' => $row['date_creation'],
           'HAS_GPS' => (!empty($row['latitude']) && !empty($row['longitude'])) ? 1 : 0,
+          'FILE_SIZE' => $filesize_str,
+          'FILE_SIZE_BYTES' => $bytes,
           'ALBUMS' => array()
         );
       }
@@ -390,7 +407,7 @@ if ($hashed_images > 0 && $hashed_images >= $total_images)
       
       foreach ($group_ids as $idx => $id) {
         $img_data = $images_data[$id];
-        $group_total_bytes += $img_data['FILE_SIZE_BYTES'];
+        $group_total_bytes += isset($img_data['FILE_SIZE_BYTES']) ? $img_data['FILE_SIZE_BYTES'] : 0;
 
         if (!empty($img_data['DATE_CREATION'])) {
           $ts = strtotime($img_data['DATE_CREATION']);
@@ -497,6 +514,8 @@ foreach ($duplicates as $group) {
 }
 
 // Sort Logic
+$sort_opt = isset($_GET['sort']) ? $_GET['sort'] : 'default';
+
 if ($sort_opt !== 'default') {
   usort($filtered_duplicates, function($a, $b) use ($sort_opt) {
     switch ($sort_opt) {
