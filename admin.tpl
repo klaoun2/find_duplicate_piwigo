@@ -400,6 +400,40 @@ function scanChunk() {
   var closeBtn = document.getElementById('fd-modal-close');
   var groups = document.querySelectorAll('.fd-group');
 
+  // Format Bytes Helper for JS
+  function formatBytes(bytes) {
+    if (bytes >= 1048576) {
+      return (bytes / 1048576).toFixed(2) + ' MB';
+    } else if (bytes >= 1024) {
+      return (bytes / 1024).toFixed(2) + ' KB';
+    }
+    return bytes + ' B';
+  }
+
+  // Toast Helper
+  function showToast(message) {
+    var container = document.getElementById('fd-toast-container');
+    var toast = document.createElement('div');
+    toast.className = 'fd-toast';
+    toast.innerText = message;
+    container.appendChild(toast);
+
+    // Animate in
+    requestAnimationFrame(function() {
+      requestAnimationFrame(function() {
+        toast.classList.add('fd-toast-show');
+      });
+    });
+
+    // Remove after 4 seconds
+    setTimeout(function() {
+      toast.classList.remove('fd-toast-show');
+      setTimeout(function() {
+        if(toast.parentNode) toast.parentNode.removeChild(toast);
+      }, 300);
+    }, 4000);
+  }
+
   // Otwieranie modala
   groups.forEach(function(groupEl) {
     groupEl.addEventListener('click', function() {

@@ -223,6 +223,9 @@ if (isset($_GET['similarity'])) {
 $current_page_idx = isset($_GET['p']) ? max(1, (int)$_GET['p']) : 1;
 $items_per_page = 20;
 
+$saved_space = isset($conf['find_duplicates_saved_space']) ? (int)$conf['find_duplicates_saved_space'] : 0;
+$saved_space_formatted = find_duplicates_format_bytes($saved_space);
+
 // Default Page View Data
 $total_query = 'SELECT COUNT(id) AS c FROM ' . IMAGES_TABLE;
 $total_row = pwg_db_fetch_assoc(pwg_query($total_query));
@@ -432,6 +435,44 @@ if ($hashed_images > 0 && $hashed_images >= $total_images)
       @unlink($file); // clean up any old cache files to avoid space bloating
     }
     @file_put_contents($cache_filename, json_encode($duplicates));
+  }
+
+  // Sort Logic
+  $sort_opt = isset($_GET['sort']) ? $_GET['sort'] : 'default';
+
+  if ($sort_opt !== 'default') {
+    usort($duplicates, function($a, $b) use ($sort_opt) {
+      switch ($sort_opt) {
+        case 'size_desc':
+          return $b['TOTAL_SIZE_BYTES'] <=> $a['TOTAL_SIZE_BYTES'];
+        case 'size_asc':
+          return $a['TOTAL_SIZE_BYTES'] <=> $b['TOTAL_SIZE_BYTES'];
+        case 'count_desc':
+          return count($b['IMAGES']) <=> count($a['IMAGES']);
+        case 'count_asc':
+          return count($a['IMAGES']) <=> count($b['IMAGES']);
+        case 'date_asc':
+        case 'date_desc':
+          // Handle missing dates (null) by placing them at the end
+          $dateA = isset($a['OLDEST_DATE_TS']) ? $a['OLDEST_DATE_TS'] : null;
+          $dateB = isset($b['OLDEST_DATE_TS']) ? $b['OLDEST_DATE_TS'] : null;
+
+          if ($dateA === null && $dateB === null) return 0;
+          if ($dateA === null) return 1;
+          if ($dateB === null) return -1;
+
+          if ($sort_opt === 'date_desc') {
+            return $dateB <=> $dateA;
+          }
+          return $dateA <=> $dateB;
+        case 'alpha_asc':
+          return strcasecmp($a['TITLE'], $b['TITLE']);
+        case 'alpha_desc':
+          return strcasecmp($b['TITLE'], $a['TITLE']);
+        default:
+          return 0;
+      }
+    });
   }
 }
 
