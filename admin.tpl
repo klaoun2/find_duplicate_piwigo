@@ -201,7 +201,7 @@ function scanChunk() {
           <h4>{$group.TITLE} <span style="font-size: 11px; opacity: 0.6; font-weight: normal;">(Hash: {$group.PHASH})</span> <button class="fd-btn" style="float: right; padding: 4px 10px; pointer-events: none;">Otwórz grupę</button></h4>
           <div style="display: flex; gap: 15px; flex-wrap: wrap; pointer-events: none; opacity: 0.8;">
             {foreach from=$group.IMAGES item=img}
-              <div class="fd-img-wrap">
+              <div class="fd-img-wrap" data-id="{$img.ID}">
                 <img src="{$img.PATH}" alt="{$img.NAME}">
               </div>
             {/foreach}
@@ -343,6 +343,18 @@ function scanChunk() {
             var images = JSON.parse(imagesJson);
             var updatedImages = images.filter(function(img) { return img.ID != imageId; });
             groupEl.setAttribute('data-images', JSON.stringify(updatedImages));
+
+            // Hide from the main list behind the modal
+            var mainListImgWrap = groupEl.querySelector('.fd-img-wrap[data-id="' + imageId + '"]');
+            if (mainListImgWrap) {
+              mainListImgWrap.style.display = 'none';
+            }
+
+            // If only 1 image left, hide the entire group and close modal
+            if (updatedImages.length <= 1) {
+              groupEl.style.display = 'none';
+              modal.style.display = 'none';
+            }
           }
         } else {
           alert('Błąd usuwania: ' + (data.error || 'Nieznany błąd'));
