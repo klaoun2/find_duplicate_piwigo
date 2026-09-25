@@ -193,12 +193,12 @@ if (isset($_GET['similarity'])) {
   if ($similarity_limit < 80) $similarity_limit = 80;
   if ($similarity_limit > 100) $similarity_limit = 100;
 
-  $same_album = isset($_GET['same_album']) ? 1 : 0;
+  $same_album = (isset($_GET['same_album']) && $_GET['same_album'] == '1') ? 1 : 0;
 
   $fd_mode = isset($_GET['fd_mode']) ? $_GET['fd_mode'] : 'visual';
   if (!in_array($fd_mode, array('visual', 'time'))) $fd_mode = 'visual';
 
-  $fd_show_hidden = isset($_GET['fd_show_hidden']) ? 1 : 0;
+  $fd_show_hidden = (isset($_GET['fd_show_hidden']) && $_GET['fd_show_hidden'] == '1') ? 1 : 0;
 
   $fd_time_interval = isset($_GET['fd_time_interval']) ? (int)$_GET['fd_time_interval'] : 15;
   $fd_search_group = isset($_GET['fd_search_group']) ? $_GET['fd_search_group'] : '';
@@ -212,11 +212,15 @@ if (isset($_GET['similarity'])) {
   // Read from db or use defaults
   $similarity_limit = isset($conf['find_duplicates_similarity']) ? (int)$conf['find_duplicates_similarity'] : 100;
   $same_album = isset($conf['find_duplicates_same_album']) ? (int)$conf['find_duplicates_same_album'] : 0;
+  // If explicitly overridden via URL, honor it temporarily without saving to conf for this view
+  if (isset($_GET['same_album'])) {
+      $same_album = $_GET['same_album'] == '1' ? 1 : 0;
+  }
 
   $fd_mode = isset($_GET['fd_mode']) ? $_GET['fd_mode'] : 'visual';
   if (!in_array($fd_mode, array('visual', 'time'))) $fd_mode = 'visual';
 
-  $fd_show_hidden = isset($_GET['fd_show_hidden']) ? 1 : 0;
+  $fd_show_hidden = (isset($_GET['fd_show_hidden']) && $_GET['fd_show_hidden'] == '1') ? 1 : 0;
 
   $fd_time_interval = isset($_GET['fd_time_interval']) ? (int)$_GET['fd_time_interval'] : 15;
   $fd_search_group = isset($_GET['fd_search_group']) ? $_GET['fd_search_group'] : '';
