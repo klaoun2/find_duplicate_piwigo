@@ -38,16 +38,22 @@
 #fd-main input[type=range] { vertical-align: middle; }
 #fd-main .fd-warning { color: #d9534f; font-size: 13px; font-weight: bold; display: none; margin-top: 5px; }
 
-#fd-main .fd-group { cursor: pointer; transition: background 0.2s; }
+#fd-main .fd-group { cursor: pointer; transition: background 0.2s, opacity 0.3s ease; opacity: 1; }
+#fd-main .fd-group.fd-fading-out { opacity: 0; pointer-events: none; }
 #fd-main .fd-group:hover { background: rgba(128,128,128,.1) !important; }
 
 /* Modal CSS */
-#fd-modal { display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.8); backdrop-filter: blur(5px); overflow: auto; }
-#fd-modal-content { background: var(--theme-bg, #222); color: var(--theme-color, #eee); margin: 5% auto; padding: 20px; border-radius: 10px; width: 90%; max-width: 1200px; position: relative; border: 1px solid rgba(128,128,128,.3); box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
+#fd-modal { display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.8); backdrop-filter: blur(5px); overflow: auto; opacity: 0; transition: opacity 0.3s ease; }
+#fd-modal.fd-modal-show { opacity: 1; }
+#fd-modal-content { background: var(--theme-bg, #222); color: var(--theme-color, #eee); margin: 5% auto; padding: 20px; border-radius: 10px; width: 90%; max-width: 1200px; position: relative; border: 1px solid rgba(128,128,128,.3); box-shadow: 0 5px 15px rgba(0,0,0,0.5); opacity: 0; transform: translateY(-40px); transition: opacity 0.3s ease, transform 0.3s ease; }
+#fd-modal.fd-modal-show #fd-modal-content { opacity: 1; transform: translateY(0); }
+#fd-modal.fd-modal-closing { opacity: 0; }
+#fd-modal.fd-modal-closing #fd-modal-content { opacity: 0; transform: translateY(-40px); }
 #fd-modal-close { position: absolute; right: 20px; top: 15px; font-size: 28px; font-weight: bold; cursor: pointer; opacity: 0.7; }
 #fd-modal-close:hover { opacity: 1; }
 .fd-modal-images { display: flex; flex-wrap: wrap; gap: 20px; margin-top: 20px; justify-content: center; }
-.fd-modal-img-wrap { text-align: center; background: rgba(128,128,128,.1); padding: 15px; border-radius: 8px; border: 1px solid rgba(128,128,128,.3); max-width: 45%; flex-grow: 1; }
+.fd-modal-img-wrap { text-align: center; background: rgba(128,128,128,.1); padding: 15px; border-radius: 8px; border: 1px solid rgba(128,128,128,.3); max-width: 45%; flex-grow: 1; transition: opacity 0.3s ease, transform 0.3s ease, max-width 0.3s ease, padding 0.3s ease, margin 0.3s ease, border-width 0.3s ease, flex-grow 0.3s ease; transform-origin: top center; overflow: hidden; }
+.fd-modal-img-wrap.fd-collapsing { opacity: 0; transform: scale(0.8); max-width: 0; padding-left: 0; padding-right: 0; margin-left: 0; margin-right: 0; border-width: 0; flex-grow: 0.0001; }
 .fd-modal-img-wrap img { max-width: 100%; max-height: 50vh; object-fit: contain; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
 .fd-modal-img-info { margin: 15px 0; font-size: 14px; word-break: break-all; }
 .fd-btn-danger { background: rgba(220, 53, 69, 0.2); border: 1px solid rgba(220, 53, 69, 0.5); color: inherit; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px; transition: 0.2s; }
@@ -271,13 +277,23 @@ function scanChunk() {
 
   // Zamykanie modala
   closeBtn.addEventListener('click', function() {
-    modal.style.display = 'none';
+    closeModal();
   });
   window.addEventListener('click', function(e) {
     if (e.target == modal) {
-      modal.style.display = 'none';
+      closeModal();
     }
   });
+
+  function closeModal(onComplete) {
+    modal.classList.remove('fd-modal-show');
+    modal.classList.add('fd-modal-closing');
+    setTimeout(function() {
+      modal.style.display = 'none';
+      modal.classList.remove('fd-modal-closing');
+      if (typeof onComplete === 'function') onComplete();
+    }, 300); // Wait for transition
+  }
 
   function openModal(title, phash, images, groupEl) {
     document.getElementById('fd-modal-title').innerText = title + ' (Hash: ' + phash + ')';
@@ -318,7 +334,16 @@ function scanChunk() {
       container.appendChild(wrap);
     });
 
+    // Reset classes and show
+    modal.classList.remove('fd-modal-closing');
     modal.style.display = 'block';
+
+    // Request animation frame to ensure transition plays
+    requestAnimationFrame(function() {
+      requestAnimationFrame(function() {
+        modal.classList.add('fd-modal-show');
+      });
+    });
   }
 
   function deleteImage(imageId, groupPhash, wrapEl, groupEl) {
@@ -333,29 +358,40 @@ function scanChunk() {
       .then(response => response.json())
       .then(data => {
         if (data.status === 'ok') {
-          // Remove visually
-          wrapEl.style.opacity = '0.3';
           btn.innerHTML = 'Usunięto';
+          // Trigger collapse animation
+          wrapEl.classList.add('fd-collapsing');
 
-          // Update JSON data on the group DOM element so if we reopen modal, it's correct
-          var imagesJson = groupEl.getAttribute('data-images');
-          if (imagesJson) {
-            var images = JSON.parse(imagesJson);
-            var updatedImages = images.filter(function(img) { return img.ID != imageId; });
-            groupEl.setAttribute('data-images', JSON.stringify(updatedImages));
-
-            // Hide from the main list behind the modal
-            var mainListImgWrap = groupEl.querySelector('.fd-img-wrap[data-id="' + imageId + '"]');
-            if (mainListImgWrap) {
-              mainListImgWrap.style.display = 'none';
+          setTimeout(function() {
+            // Remove DOM element completely after transition
+            if (wrapEl.parentNode) {
+              wrapEl.parentNode.removeChild(wrapEl);
             }
 
-            // If only 1 image left, hide the entire group and close modal
-            if (updatedImages.length <= 1) {
-              groupEl.style.display = 'none';
-              modal.style.display = 'none';
+            // Update JSON data on the group DOM element so if we reopen modal, it's correct
+            var imagesJson = groupEl.getAttribute('data-images');
+            if (imagesJson) {
+              var images = JSON.parse(imagesJson);
+              var updatedImages = images.filter(function(img) { return img.ID != imageId; });
+              groupEl.setAttribute('data-images', JSON.stringify(updatedImages));
+
+              // Hide from the main list behind the modal
+              var mainListImgWrap = groupEl.querySelector('.fd-img-wrap[data-id="' + imageId + '"]');
+              if (mainListImgWrap) {
+                mainListImgWrap.style.display = 'none';
+              }
+
+              // If only 1 image left, close modal then fade out group
+              if (updatedImages.length <= 1) {
+                closeModal(function() {
+                  groupEl.classList.add('fd-fading-out');
+                  setTimeout(function() {
+                    groupEl.style.display = 'none';
+                  }, 300);
+                });
+              }
             }
-          }
+          }, 300); // Wait for collapsing to finish
         } else {
           alert('Błąd usuwania: ' + (data.error || 'Nieznany błąd'));
           btn.innerHTML = originalText;
