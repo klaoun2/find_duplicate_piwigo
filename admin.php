@@ -257,8 +257,8 @@ if ($hashed_images > 0 && $hashed_images >= $total_images)
   }
   
   // Cache key only depends on the heavy grouping parameters.
-  // We use v8 to fix the final metadata caching structure.
-  $cache_filename = $cache_dir . '/cache_v8_s' . $similarity_limit . '_a' . $same_album . '_h' . $hashed_images . '_m' . $fd_mode . '_t' . $fd_time_interval . '.json';
+  // We use v9 to fix the final metadata caching structure.
+  $cache_filename = $cache_dir . '/cache_v9_s' . $similarity_limit . '_a' . $same_album . '_h' . $hashed_images . '_m' . $fd_mode . '_t' . $fd_time_interval . '.json';
   
   if (file_exists($cache_filename)) {
     // Load from cache
@@ -430,6 +430,9 @@ if ($hashed_images > 0 && $hashed_images >= $total_images)
       $duplicates[] = array(
         'PHASH' => $lead_hash . ($max_diff > 0 ? ' (~' . $similarity_limit . '%)' : ''),
         'BASE_ALBUM_NAME' => $album_name,
+        'TOTAL_SIZE' => find_duplicates_format_bytes($group_total_bytes),
+        'TOTAL_SIZE_BYTES' => $group_total_bytes,
+        'OLDEST_DATE_TS' => $oldest_date,
         'IMAGES' => $group_images
       );
     }
@@ -507,6 +510,9 @@ foreach ($duplicates as $group) {
   $filtered_duplicates[] = array(
     'PHASH' => $group['PHASH'],
     'TITLE' => $group_title,
+    'TOTAL_SIZE' => isset($group['TOTAL_SIZE']) ? $group['TOTAL_SIZE'] : 'Brak',
+    'TOTAL_SIZE_BYTES' => isset($group['TOTAL_SIZE_BYTES']) ? $group['TOTAL_SIZE_BYTES'] : 0,
+    'OLDEST_DATE_TS' => isset($group['OLDEST_DATE_TS']) ? $group['OLDEST_DATE_TS'] : null,
     'IMAGES' => $group_images_updated
   );
 
