@@ -318,7 +318,18 @@ function scanChunk() {
 
       var info = document.createElement('div');
       info.className = 'fd-modal-img-info';
-      info.innerHTML = 'ID: ' + img.ID + '<br>' + img.FILE + '<br><br>';
+
+      var creationDate = img.DATE_CREATION ? img.DATE_CREATION : 'Nieznana';
+      var fileSize = img.FILE_SIZE ? img.FILE_SIZE : 'Brak danych';
+      var hasLocation = img.HAS_LOCATION ? img.HAS_LOCATION : 'Nie';
+      var albumsCount = img.ALBUMS_COUNT ? img.ALBUMS_COUNT : 0;
+
+      info.innerHTML = 'ID: ' + img.ID + '<br>' +
+                       'Plik: ' + img.FILE + '<br>' +
+                       'Data utworzenia: ' + creationDate + '<br>' +
+                       'Rozmiar: ' + fileSize + '<br>' +
+                       'Lokalizacja: ' + hasLocation + '<br>' +
+                       'W albumach: ' + albumsCount + '<br><br>';
 
       var delBtn = document.createElement('button');
       delBtn.className = 'fd-btn-danger';

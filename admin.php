@@ -98,8 +98,8 @@ if (isset($_GET['action']) && $_GET['action'] == 'delete_image') {
 
   // Odczytujemy stary plik (przed usunięciem), gdzie zahashowanych było o 1 więcej
   $old_hashed_images = $current_hashed_images + 1;
-  $old_cache_filename = $cache_dir . '/cache_s' . $similarity_limit . '_a' . $same_album . '_h' . $old_hashed_images . '.json';
-  $new_cache_filename = $cache_dir . '/cache_s' . $similarity_limit . '_a' . $same_album . '_h' . $current_hashed_images . '.json';
+  $old_cache_filename = $cache_dir . '/cache_v2_s' . $similarity_limit . '_a' . $same_album . '_h' . $old_hashed_images . '.json';
+  $new_cache_filename = $cache_dir . '/cache_v2_s' . $similarity_limit . '_a' . $same_album . '_h' . $current_hashed_images . '.json';
 
   if (file_exists($old_cache_filename)) {
     $cached_data = @file_get_contents($old_cache_filename);
@@ -191,7 +191,8 @@ if ($hashed_images > 0 && $hashed_images >= $total_images)
   
   // Cache key is based on settings AND the number of hashed images. 
   // If images are added or removed, the hashed_images count changes, invalidating cache.
-  $cache_filename = $cache_dir . '/cache_s' . $similarity_limit . '_a' . $same_album . '_h' . $hashed_images . '.json';
+  // Added _v2 to force invalidate old caches without new properties.
+  $cache_filename = $cache_dir . '/cache_v2_s' . $similarity_limit . '_a' . $same_album . '_h' . $hashed_images . '.json';
   
   if (file_exists($cache_filename)) {
     // Load from cache
@@ -206,7 +207,7 @@ if ($hashed_images > 0 && $hashed_images >= $total_images)
     $max_diff = round((100 - $similarity_limit) / 100 * 64);
     
     $query = '
-      SELECT i.id, i.path, i.name, i.file, h.phash, ic.category_id, c.name as cat_name
+      SELECT i.id, i.path, i.name, i.file, i.date_creation, i.latitude, i.longitude, h.phash, ic.category_id, c.name as cat_name
       FROM ' . FIND_DUPLICATES_TABLE . ' h
       INNER JOIN ' . IMAGES_TABLE . ' i ON h.image_id = i.id
       LEFT JOIN ' . IMAGE_CATEGORY_TABLE . ' ic ON i.id = ic.image_id
@@ -220,6 +221,23 @@ if ($hashed_images > 0 && $hashed_images >= $total_images)
     {
       $img_id = $row['id'];
       if (!isset($images_data[$img_id])) {
+        // Calculate filesize
+        $file_path_abs = PHPWG_ROOT_PATH . $row['path'];
+        $filesize_str = 'Brak danych';
+        if (file_exists($file_path_abs)) {
+          $bytes = filesize($file_path_abs);
+          if ($bytes >= 1048576) {
+            $filesize_str = number_format($bytes / 1048576, 2) . ' MB';
+          } elseif ($bytes >= 1024) {
+            $filesize_str = number_format($bytes / 1024, 2) . ' KB';
+          } else {
+            $filesize_str = $bytes . ' B';
+          }
+        }
+
+        // Location
+        $has_location = (!empty($row['latitude']) && !empty($row['longitude'])) ? 'Tak' : 'Nie';
+
         $images_data[$img_id] = array(
           'ID' => $row['id'],
           'PATH' => $row['path'],
@@ -227,6 +245,9 @@ if ($hashed_images > 0 && $hashed_images >= $total_images)
           'NAME' => $row['name'] ? $row['name'] : $row['file'],
           'URL' => get_root_url() . 'admin.php?page=photo-' . $row['id'],
           'PHASH' => $row['phash'],
+          'DATE_CREATION' => $row['date_creation'],
+          'FILE_SIZE' => $filesize_str,
+          'HAS_LOCATION' => $has_location,
           'ALBUMS' => array()
         );
       }
@@ -279,7 +300,9 @@ if ($hashed_images > 0 && $hashed_images >= $total_images)
       $lead_hash = '';
       
       foreach ($group_ids as $idx => $id) {
-        $group_images[] = $images_data[$id];
+        $img_data = $images_data[$id];
+        $img_data['ALBUMS_COUNT'] = count($img_data['ALBUMS']);
+        $group_images[] = $img_data;
         if ($idx === 0) {
           $lead_hash = $images_data[$id]['PHASH'];
           if (!empty($images_data[$id]['ALBUMS'])) {
