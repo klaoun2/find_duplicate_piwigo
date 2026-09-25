@@ -120,7 +120,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'delete_image') {
   }
 
   $cache_dir = PHPWG_ROOT_PATH . '_data/find_duplicates_cache';
-
+  
   // Delete action must also use wildcard to clean cache if exact match fails
   $files = glob($cache_dir . '/*.json');
   if ($files) {
@@ -153,14 +153,14 @@ if (isset($_GET['action']) && $_GET['action'] == 'toggle_favorite') {
   $query = 'SELECT is_favorite FROM ' . FIND_DUPLICATES_TABLE . ' WHERE image_id = ' . $image_id;
   $result = pwg_query($query);
   $row = pwg_db_fetch_assoc($result);
-
+  
   if ($row) {
     $new_status = $row['is_favorite'] ? 0 : 1;
     pwg_query('UPDATE ' . FIND_DUPLICATES_TABLE . ' SET is_favorite = ' . $new_status . ' WHERE image_id = ' . $image_id);
-
-    // Do NOT invalidate cache anymore!
+    
+    // Do NOT invalidate cache anymore! 
     // Favorite status is now injected dynamically during the render phase.
-
+    
     echo json_encode(array('status' => 'ok', 'is_favorite' => $new_status));
   } else {
     echo json_encode(array('status' => 'error', 'error' => 'Image not found in duplicates table.'));
@@ -187,10 +187,10 @@ if (isset($_GET['similarity'])) {
   if ($similarity_limit > 100) $similarity_limit = 100;
 
   $same_album = (isset($_GET['same_album']) && $_GET['same_album'] == '1') ? 1 : 0;
-
+  
   $fd_mode = isset($_GET['fd_mode']) ? $_GET['fd_mode'] : 'visual';
   if (!in_array($fd_mode, array('visual', 'time'))) $fd_mode = 'visual';
-
+  
   $fd_show_hidden = (isset($_GET['fd_show_hidden']) && $_GET['fd_show_hidden'] == '1') ? 1 : 0;
 
   $fd_time_interval = isset($_GET['fd_time_interval']) ? (int)$_GET['fd_time_interval'] : 15;
@@ -209,12 +209,12 @@ if (isset($_GET['similarity'])) {
   if (isset($_GET['same_album'])) {
       $same_album = $_GET['same_album'] == '1' ? 1 : 0;
   }
-
+  
   $fd_mode = isset($_GET['fd_mode']) ? $_GET['fd_mode'] : 'visual';
   if (!in_array($fd_mode, array('visual', 'time'))) $fd_mode = 'visual';
 
   $fd_show_hidden = (isset($_GET['fd_show_hidden']) && $_GET['fd_show_hidden'] == '1') ? 1 : 0;
-
+  
   $fd_time_interval = isset($_GET['fd_time_interval']) ? (int)$_GET['fd_time_interval'] : 15;
   $fd_search_group = isset($_GET['fd_search_group']) ? $_GET['fd_search_group'] : '';
 }
@@ -222,9 +222,6 @@ if (isset($_GET['similarity'])) {
 // User Settings for Pagination
 $current_page_idx = isset($_GET['p']) ? max(1, (int)$_GET['p']) : 1;
 $items_per_page = 20;
-
-$saved_space = isset($conf['find_duplicates_saved_space']) ? (int)$conf['find_duplicates_saved_space'] : 0;
-$saved_space_formatted = find_duplicates_format_bytes($saved_space);
 
 // Default Page View Data
 $total_query = 'SELECT COUNT(id) AS c FROM ' . IMAGES_TABLE;
@@ -359,13 +356,13 @@ if ($hashed_images > 0 && $hashed_images >= $total_images)
       $processed_ids = array();
       foreach ($images_data as $id1 => $img1) {
         if (isset($processed_ids[$id1])) continue;
-
+        
         $current_group = array($id1);
-
+        
         foreach ($images_data as $id2 => $img2) {
           if ($id1 == $id2) continue;
           if (isset($processed_ids[$id2])) continue;
-
+          
           // Check Album Condition
           if ($same_album) {
             $shared_albums = array_intersect(array_keys($img1['ALBUMS']), array_keys($img2['ALBUMS']));
@@ -373,14 +370,14 @@ if ($hashed_images > 0 && $hashed_images >= $total_images)
               continue; // Not in the same album
             }
           }
-
+          
           // Check Similarity Condition
           $dist = find_duplicates_hamming_distance($img1['PHASH'], $img2['PHASH']);
           if ($dist <= $max_diff) {
             $current_group[] = $id2;
           }
         }
-
+        
         if (count($current_group) > 1) {
           $groups[] = $current_group;
           foreach ($current_group as $gid) {
@@ -409,7 +406,7 @@ if ($hashed_images > 0 && $hashed_images >= $total_images)
             }
           }
         }
-
+        
         $group_images[] = $img_data;
         if ($idx === 0) {
           $lead_hash = $images_data[$id]['PHASH'];
@@ -435,44 +432,6 @@ if ($hashed_images > 0 && $hashed_images >= $total_images)
       @unlink($file); // clean up any old cache files to avoid space bloating
     }
     @file_put_contents($cache_filename, json_encode($duplicates));
-  }
-
-  // Sort Logic
-  $sort_opt = isset($_GET['sort']) ? $_GET['sort'] : 'default';
-
-  if ($sort_opt !== 'default') {
-    usort($duplicates, function($a, $b) use ($sort_opt) {
-      switch ($sort_opt) {
-        case 'size_desc':
-          return $b['TOTAL_SIZE_BYTES'] <=> $a['TOTAL_SIZE_BYTES'];
-        case 'size_asc':
-          return $a['TOTAL_SIZE_BYTES'] <=> $b['TOTAL_SIZE_BYTES'];
-        case 'count_desc':
-          return count($b['IMAGES']) <=> count($a['IMAGES']);
-        case 'count_asc':
-          return count($a['IMAGES']) <=> count($b['IMAGES']);
-        case 'date_asc':
-        case 'date_desc':
-          // Handle missing dates (null) by placing them at the end
-          $dateA = isset($a['OLDEST_DATE_TS']) ? $a['OLDEST_DATE_TS'] : null;
-          $dateB = isset($b['OLDEST_DATE_TS']) ? $b['OLDEST_DATE_TS'] : null;
-
-          if ($dateA === null && $dateB === null) return 0;
-          if ($dateA === null) return 1;
-          if ($dateB === null) return -1;
-
-          if ($sort_opt === 'date_desc') {
-            return $dateB <=> $dateA;
-          }
-          return $dateA <=> $dateB;
-        case 'alpha_asc':
-          return strcasecmp($a['TITLE'], $b['TITLE']);
-        case 'alpha_desc':
-          return strcasecmp($b['TITLE'], $a['TITLE']);
-        default:
-          return 0;
-      }
-    });
   }
 }
 
@@ -505,7 +464,7 @@ $total_images_in_groups = 0;
 foreach ($duplicates as $group) {
   $all_favorites = true;
   $group_images_updated = array();
-
+  
   foreach ($group['IMAGES'] as $img) {
     $img['IS_FAVORITE'] = isset($favorites_map[$img['ID']]) ? 1 : 0;
     $img['ALBUM_COUNT'] = count($img['ALBUMS']);
@@ -514,7 +473,7 @@ foreach ($duplicates as $group) {
     }
     $group_images_updated[] = $img;
   }
-
+  
   // Filter out groups based on favorites logic
   if ($fd_show_hidden && !$all_favorites) {
     continue; // When show_hidden is checked, show ONLY groups where all are favorites
@@ -528,7 +487,7 @@ foreach ($duplicates as $group) {
   if (!empty($fd_search_group) && stripos($album_name, $fd_search_group) === false) {
     continue;
   }
-
+  
   if (!isset($album_counts[$album_name])) {
     $album_counts[$album_name] = 1;
   } else {
@@ -545,7 +504,7 @@ foreach ($duplicates as $group) {
     'OLDEST_DATE_TS' => isset($group['OLDEST_DATE_TS']) ? $group['OLDEST_DATE_TS'] : null,
     'IMAGES' => $group_images_updated
   );
-
+  
   $total_images_in_groups += count($group_images_updated);
 }
 

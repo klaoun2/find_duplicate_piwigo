@@ -78,15 +78,15 @@
 .fd-tab.active { background: rgba(90,150,220,.2); border-color: rgba(90,150,220,.5); color: #fff; }
 .fd-tab:hover:not(.active) { background: rgba(128,128,128,.2); }
 
-.fd-favorite-btn {
-  background: rgba(255,193,7,0.1);
-  border: 1px solid rgba(255,193,7,0.5);
-  color: #ffc107;
-  cursor: pointer;
-  padding: 8px 12px;
-  border-radius: 6px;
-  font-size: 18px;
-  margin-top: 5px;
+.fd-favorite-btn { 
+  background: rgba(255,193,7,0.1); 
+  border: 1px solid rgba(255,193,7,0.5); 
+  color: #ffc107; 
+  cursor: pointer; 
+  padding: 8px 12px; 
+  border-radius: 6px; 
+  font-size: 18px; 
+  margin-top: 5px; 
   transition: 0.2s;
   line-height: 1;
 }
@@ -184,7 +184,7 @@ function scanChunk() {
 
 <form id="fd-filter-form">
   <input type="hidden" id="fd-mode-input" value="{$FD_MODE}">
-
+  
   <div class="fd-search-bar">
     <label for="fd-search-group">Filtruj wg nazwy albumu/grupy:</label>
     <input type="text" id="fd-search-group" value="{$FD_SEARCH_GROUP|escape:'html'}" placeholder="np. Wycieczka...">
@@ -208,7 +208,7 @@ function scanChunk() {
         <option value="60" {if $FD_TIME_INTERVAL == 60}selected{/if}>60 s</option>
       </select>
     </label>
-
+    
     <label>
       <input type="checkbox" id="fd-same-album-chk" value="1" {if $FD_SAME_ALBUM}checked{/if}>
       Szukaj tylko w tym samym albumie
@@ -218,7 +218,7 @@ function scanChunk() {
       <input type="checkbox" id="fd-show-hidden-chk" value="1" {if $FD_SHOW_HIDDEN}checked{/if}>
       Pokaż tylko ukryte ulubione
     </label>
-
+    
     <button type="submit" class="fd-btn">Zastosuj</button>
   </div>
   <div class="fd-warning" id="fd-warning-msg"></div>
@@ -238,7 +238,7 @@ function scanChunk() {
       submitFilters();
     });
   }
-
+  
   function submitFilters(overrideMode) {
       var mode = overrideMode || document.getElementById('fd-mode-input').value;
       var sim = document.getElementById('fd-similarity-range').value;
@@ -246,10 +246,10 @@ function scanChunk() {
       var showHidden = document.getElementById('fd-show-hidden-chk').checked ? 1 : 0;
       var searchGroup = encodeURIComponent(document.getElementById('fd-search-group').value);
       var timeInterval = document.getElementById('fd-time-interval-select').value;
-
+      
       window.location.href = actionUrl + '&fd_mode=' + mode + '&similarity=' + sim + '&same_album=' + sameAlbum + '&fd_show_hidden=' + showHidden + '&fd_search_group=' + searchGroup + '&fd_time_interval=' + timeInterval;
   }
-
+  
   // Auto-submit when hidden checkbox is toggled
   var hiddenChk = document.getElementById('fd-show-hidden-chk');
   if (hiddenChk) {
@@ -269,7 +269,7 @@ function scanChunk() {
           window.location.href = actionUrl + '&fd_mode=' + mode + '&similarity=' + sim + '&same_album=' + sameAlbum;
       });
   });
-
+  
   function updateWarning() {
     if (!chk.checked) {
       var comparisons = (totalImages * (totalImages - 1)) / 2;
@@ -320,7 +320,7 @@ function scanChunk() {
         var searchGroup = "{$FD_SEARCH_GROUP|escape:'url'}";
         var timeInterval = "{$FD_TIME_INTERVAL|escape:'javascript'}";
         var sortVal = this.value;
-
+        
         window.location.href = actionUrl + '&fd_mode=' + mode + '&similarity=' + similarity + '&same_album=' + sameAlbum + '&fd_show_hidden=' + showHidden + '&fd_search_group=' + searchGroup + '&fd_time_interval=' + timeInterval + '&sort=' + sortVal;
       });
     </script>
@@ -329,7 +329,7 @@ function scanChunk() {
       {foreach from=$FD_DUPLICATES item=group}
         <div class="fd-group" data-phash="{$group.PHASH|escape:'html'}" data-title="{$group.TITLE|escape:'html'}" data-images="{$group.IMAGES|@json_encode|escape:'html'}">
           <h4>
-            {$group.TITLE} <span style="font-size: 11px; opacity: 0.6; font-weight: normal;">({if $FD_MODE == 'time'}Zakres czasu{else}Hash: {$group.PHASH}{/if})</span>
+            {$group.TITLE} <span style="font-size: 11px; opacity: 0.6; font-weight: normal;">({if $FD_MODE == 'time'}Zakres czasu{else}Hash: {$group.PHASH}{/if})</span> 
             <button class="fd-btn" style="float: right; padding: 4px 10px; pointer-events: none;">Otwórz grupę</button>
             <span style="float: right; margin-right: 15px; padding: 4px 10px; background: rgba(128,128,128,0.2); border-radius: 6px; font-size: 13px; font-weight: normal; border: 1px solid rgba(128,128,128,0.4);">Rozmiar: {$group.TOTAL_SIZE|default:'Brak danych'}</span>
           </h4>
@@ -400,40 +400,6 @@ function scanChunk() {
   var closeBtn = document.getElementById('fd-modal-close');
   var groups = document.querySelectorAll('.fd-group');
 
-  // Format Bytes Helper for JS
-  function formatBytes(bytes) {
-    if (bytes >= 1048576) {
-      return (bytes / 1048576).toFixed(2) + ' MB';
-    } else if (bytes >= 1024) {
-      return (bytes / 1024).toFixed(2) + ' KB';
-    }
-    return bytes + ' B';
-  }
-
-  // Toast Helper
-  function showToast(message) {
-    var container = document.getElementById('fd-toast-container');
-    var toast = document.createElement('div');
-    toast.className = 'fd-toast';
-    toast.innerText = message;
-    container.appendChild(toast);
-
-    // Animate in
-    requestAnimationFrame(function() {
-      requestAnimationFrame(function() {
-        toast.classList.add('fd-toast-show');
-      });
-    });
-
-    // Remove after 4 seconds
-    setTimeout(function() {
-      toast.classList.remove('fd-toast-show');
-      setTimeout(function() {
-        if(toast.parentNode) toast.parentNode.removeChild(toast);
-      }, 300);
-    }, 4000);
-  }
-
   // Otwieranie modala
   groups.forEach(function(groupEl) {
     groupEl.addEventListener('click', function() {
@@ -491,7 +457,7 @@ function scanChunk() {
       closeModal();
     }
   });
-
+  
   function closeModal(onComplete) {
     modal.classList.remove('fd-modal-show');
     modal.classList.add('fd-modal-closing');
@@ -525,7 +491,7 @@ function scanChunk() {
 
       var info = document.createElement('div');
       info.className = 'fd-modal-img-info';
-
+      
       var creationDate = img.DATE_CREATION ? img.DATE_CREATION : 'Nieznana';
       var fileSize = img.FILE_SIZE ? img.FILE_SIZE : 'Brak danych';
 
@@ -537,13 +503,13 @@ function scanChunk() {
          }
          albumsHtml += '</ul>';
       }
-
+      
       var gpsHtml = (img.HAS_GPS == 1) ? '<span style="color:#5cb85c; font-weight:bold;">📍 Zdjęcie posiada dane GPS</span><br>' : '';
-
-      info.innerHTML = 'ID: ' + img.ID + '<br>' +
-                       'Plik: ' + img.FILE + '<br>' +
+      
+      info.innerHTML = 'ID: ' + img.ID + '<br>' + 
+                       'Plik: ' + img.FILE + '<br>' + 
                        'Data utworzenia: ' + creationDate + '<br>' +
-                       'Rozmiar: ' + fileSize + '<br><br>' +
+                       'Rozmiar: ' + fileSize + '<br><br>' + 
                        gpsHtml + albumsHtml;
 
       var delBtn = document.createElement('button');
@@ -554,7 +520,7 @@ function scanChunk() {
           deleteImage(img.ID, phash, wrap, groupEl);
         }
       };
-
+      
       var favBtn = document.createElement('button');
       var isFav = img.IS_FAVORITE == 1;
       favBtn.className = 'fd-favorite-btn ' + (isFav ? 'active' : '');
@@ -597,10 +563,10 @@ function scanChunk() {
         if (data.status === 'ok') {
           var isFav = data.is_favorite == 1;
           imgObj.IS_FAVORITE = data.is_favorite;
-
+          
           btnEl.className = 'fd-favorite-btn ' + (isFav ? 'active' : '');
           btnEl.innerHTML = isFav ? '★' : '☆';
-
+          
           // Update JSON data on the group DOM element
           var imagesJson = groupEl.getAttribute('data-images');
           if (imagesJson) {
