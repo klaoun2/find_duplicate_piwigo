@@ -232,11 +232,24 @@ function scanChunk() {
 
       window.location.href = actionUrl + '&fd_mode=' + mode + '&similarity=' + sim + '&same_album=' + sameAlbum + '&fd_show_hidden=' + showHidden + '&fd_search_group=' + searchGroup + '&fd_time_interval=' + timeInterval;
   }
-  
+
+  // Auto-submit when hidden checkbox is toggled
+  var hiddenChk = document.getElementById('fd-show-hidden-chk');
+  if (hiddenChk) {
+      hiddenChk.addEventListener('change', function() {
+          submitFilters();
+      });
+  }
+
   var tabs = document.querySelectorAll('.fd-tab');
   tabs.forEach(function(tab) {
       tab.addEventListener('click', function() {
-          submitFilters(this.getAttribute('data-mode'));
+          // Reset explicitly on tab switch
+          var mode = this.getAttribute('data-mode');
+          var sim = document.getElementById('fd-similarity-range').value;
+          var sameAlbum = chk.checked ? 1 : 0;
+          // Do not carry over search and hidden states to avoid sticky confusion
+          window.location.href = actionUrl + '&fd_mode=' + mode + '&similarity=' + sim + '&same_album=' + sameAlbum;
       });
   });
 
