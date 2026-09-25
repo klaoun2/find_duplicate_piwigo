@@ -257,8 +257,8 @@ if ($hashed_images > 0 && $hashed_images >= $total_images)
   }
   
   // Cache key only depends on the heavy grouping parameters.
-  // We use v4 to clear out old caches. Search and hidden flags are applied in-memory.
-  $cache_filename = $cache_dir . '/cache_v4_s' . $similarity_limit . '_a' . $same_album . '_h' . $hashed_images . '_m' . $fd_mode . '_t' . $fd_time_interval . '.json';
+  // We use v6 to force invalidate old caches that lacked file size and date metrics.
+  $cache_filename = $cache_dir . '/cache_v6_s' . $similarity_limit . '_a' . $same_album . '_h' . $hashed_images . '_m' . $fd_mode . '_t' . $fd_time_interval . '.json';
   
   if (file_exists($cache_filename)) {
     // Load from cache
