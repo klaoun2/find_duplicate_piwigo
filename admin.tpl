@@ -214,8 +214,12 @@ function scanChunk() {
     <div class="fd-duplicates-list">
       {foreach from=$FD_DUPLICATES item=group}
         <div class="fd-group" data-phash="{$group.PHASH|escape:'html'}" data-title="{$group.TITLE|escape:'html'}" data-images="{$group.IMAGES|@json_encode|escape:'html'}">
-          <h4>{$group.TITLE} <span style="font-size: 11px; opacity: 0.6; font-weight: normal;">(Hash: {$group.PHASH})</span> <button class="fd-btn" style="float: right; padding: 4px 10px; pointer-events: none;">Otwórz grupę</button></h4>
-          <div style="display: flex; gap: 15px; flex-wrap: wrap; pointer-events: none; opacity: 0.8;">
+          <h4>
+            {$group.TITLE} <span style="font-size: 11px; opacity: 0.6; font-weight: normal;">(Hash: {$group.PHASH})</span>
+            <button class="fd-btn" style="float: right; padding: 4px 10px; pointer-events: none;">Otwórz grupę</button>
+            <span style="float: right; margin-right: 15px; padding: 4px 10px; background: rgba(128,128,128,0.2); border-radius: 6px; font-size: 13px; font-weight: normal; border: 1px solid rgba(128,128,128,0.4);">Rozmiar: {$group.TOTAL_SIZE}</span>
+          </h4>
+          <div style="display: flex; gap: 15px; flex-wrap: wrap; pointer-events: none; opacity: 0.8; clear: both; padding-top: 10px;">
             {foreach from=$group.IMAGES item=img}
               <div class="fd-img-wrap" data-id="{$img.ID}">
                 <img src="{$img.PATH}" alt="{$img.NAME}">
