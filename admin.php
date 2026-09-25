@@ -126,8 +126,8 @@ if (isset($_GET['action']) && $_GET['action'] == 'delete_image') {
 
   // Odczytujemy stary plik (przed usunięciem), gdzie zahashowanych było o 1 więcej
   $old_hashed_images = $current_hashed_images + 1;
-  $old_cache_filename = $cache_dir . '/cache_v4_s' . $similarity_limit . '_a' . $same_album . '_h' . $old_hashed_images . '.json';
-  $new_cache_filename = $cache_dir . '/cache_v4_s' . $similarity_limit . '_a' . $same_album . '_h' . $current_hashed_images . '.json';
+  $old_cache_filename = $cache_dir . '/cache_v5_s' . $similarity_limit . '_a' . $same_album . '_h' . $old_hashed_images . '.json';
+  $new_cache_filename = $cache_dir . '/cache_v5_s' . $similarity_limit . '_a' . $same_album . '_h' . $current_hashed_images . '.json';
 
   if (file_exists($old_cache_filename)) {
     $cached_data = @file_get_contents($old_cache_filename);
@@ -138,11 +138,21 @@ if (isset($_GET['action']) && $_GET['action'] == 'delete_image') {
       foreach ($duplicates as $group) {
         $filtered_images = array();
         $group_total_bytes = 0;
+        $oldest_date = null;
+
         foreach ($group['IMAGES'] as $img) {
           if ($img['ID'] != $image_id) {
             $filtered_images[] = $img;
             if (isset($img['FILE_SIZE_BYTES'])) {
               $group_total_bytes += $img['FILE_SIZE_BYTES'];
+            }
+            if (!empty($img['DATE_CREATION'])) {
+              $ts = strtotime($img['DATE_CREATION']);
+              if ($ts !== false) {
+                if ($oldest_date === null || $ts < $oldest_date) {
+                  $oldest_date = $ts;
+                }
+              }
             }
           }
         }
@@ -150,6 +160,8 @@ if (isset($_GET['action']) && $_GET['action'] == 'delete_image') {
         // Zostawiamy grupę, tylko jeśli zostało w niej więcej niż 1 zdjęcie
         if (count($filtered_images) > 1) {
           $group['IMAGES'] = $filtered_images;
+          $group['TOTAL_SIZE_BYTES'] = $group_total_bytes;
+          $group['OLDEST_DATE_TS'] = $oldest_date;
 
           // Helper: format bytes - upewnijmy się że funkcja jest dostępna wyżej
           if (function_exists('find_duplicates_format_bytes')) {
@@ -237,8 +249,8 @@ if ($hashed_images > 0 && $hashed_images >= $total_images)
   
   // Cache key is based on settings AND the number of hashed images. 
   // If images are added or removed, the hashed_images count changes, invalidating cache.
-  // Added _v4 to force invalidate old caches due to TOTAL_SIZE missing bug.
-  $cache_filename = $cache_dir . '/cache_v4_s' . $similarity_limit . '_a' . $same_album . '_h' . $hashed_images . '.json';
+  // Added _v5 to force invalidate old caches missing the sorting keys.
+  $cache_filename = $cache_dir . '/cache_v5_s' . $similarity_limit . '_a' . $same_album . '_h' . $hashed_images . '.json';
   
   if (file_exists($cache_filename)) {
     // Load from cache
@@ -347,11 +359,22 @@ if ($hashed_images > 0 && $hashed_images >= $total_images)
       $album_name = 'Nieznany album';
       $lead_hash = '';
       $group_total_bytes = 0;
+      $oldest_date = null;
       
       foreach ($group_ids as $idx => $id) {
         $img_data = $images_data[$id];
         $img_data['ALBUMS_COUNT'] = count($img_data['ALBUMS']);
         $group_total_bytes += $img_data['FILE_SIZE_BYTES'];
+
+        if (!empty($img_data['DATE_CREATION'])) {
+          $ts = strtotime($img_data['DATE_CREATION']);
+          if ($ts !== false) {
+            if ($oldest_date === null || $ts < $oldest_date) {
+              $oldest_date = $ts;
+            }
+          }
+        }
+
         $group_images[] = $img_data;
         if ($idx === 0) {
           $lead_hash = $images_data[$id]['PHASH'];
@@ -373,6 +396,8 @@ if ($hashed_images > 0 && $hashed_images >= $total_images)
         'PHASH' => $lead_hash . ($max_diff > 0 ? ' (~' . $similarity_limit . '%)' : ''),
         'TITLE' => $group_title,
         'TOTAL_SIZE' => find_duplicates_format_bytes($group_total_bytes),
+        'TOTAL_SIZE_BYTES' => $group_total_bytes,
+        'OLDEST_DATE_TS' => $oldest_date,
         'IMAGES' => $group_images
       );
     }
@@ -384,7 +409,47 @@ if ($hashed_images > 0 && $hashed_images >= $total_images)
     }
     @file_put_contents($cache_filename, json_encode($duplicates));
   }
+
+  // Sort Logic
+  $sort_opt = isset($_GET['sort']) ? $_GET['sort'] : 'default';
+
+  if ($sort_opt !== 'default') {
+    usort($duplicates, function($a, $b) use ($sort_opt) {
+      switch ($sort_opt) {
+        case 'size_desc':
+          return $b['TOTAL_SIZE_BYTES'] <=> $a['TOTAL_SIZE_BYTES'];
+        case 'size_asc':
+          return $a['TOTAL_SIZE_BYTES'] <=> $b['TOTAL_SIZE_BYTES'];
+        case 'count_desc':
+          return count($b['IMAGES']) <=> count($a['IMAGES']);
+        case 'count_asc':
+          return count($a['IMAGES']) <=> count($b['IMAGES']);
+        case 'date_asc':
+        case 'date_desc':
+          // Handle missing dates (null) by placing them at the end
+          $dateA = isset($a['OLDEST_DATE_TS']) ? $a['OLDEST_DATE_TS'] : null;
+          $dateB = isset($b['OLDEST_DATE_TS']) ? $b['OLDEST_DATE_TS'] : null;
+
+          if ($dateA === null && $dateB === null) return 0;
+          if ($dateA === null) return 1;
+          if ($dateB === null) return -1;
+
+          if ($sort_opt === 'date_desc') {
+            return $dateB <=> $dateA;
+          }
+          return $dateA <=> $dateB;
+        case 'alpha_asc':
+          return strcasecmp($a['TITLE'], $b['TITLE']);
+        case 'alpha_desc':
+          return strcasecmp($b['TITLE'], $a['TITLE']);
+        default:
+          return 0;
+      }
+    });
+  }
 }
+
+$sort_opt_clean = isset($_GET['sort']) ? htmlspecialchars($_GET['sort']) : 'default';
 
 // Pagination logic
 $total_duplicates_groups = count($duplicates);
@@ -417,6 +482,7 @@ $template->assign(array(
   'FD_SIMILARITY' => $similarity_limit,
   'FD_SAME_ALBUM' => $same_album,
   'FD_TOTAL_SAVED_SPACE' => $saved_space_formatted,
+  'FD_SORT' => $sort_opt_clean,
 ));
 
 $template->set_filenames(array('plugin_admin_content' => FIND_DUPLICATES_PATH . 'admin.tpl'));

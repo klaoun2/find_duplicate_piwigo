@@ -209,7 +209,34 @@ function scanChunk() {
 <div class="fd-panel">
   <h3>Znalezione duplikaty</h3>
   {if count($FD_DUPLICATES) > 0}
-    <p>Znaleziono {$FD_TOTAL_GROUPS} grup powiązanych zdjęć. Strona {$FD_CURRENT_PAGE} z {$FD_TOTAL_PAGES}.</p>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+      <p style="margin: 0;">Znaleziono {$FD_TOTAL_GROUPS} grup powiązanych zdjęć. Strona {$FD_CURRENT_PAGE} z {$FD_TOTAL_PAGES}.</p>
+
+      <div>
+        <label for="fd-sort-select" style="margin-right: 5px;">Sortuj:</label>
+        <select id="fd-sort-select" style="padding: 5px; border-radius: 4px; border: 1px solid rgba(128,128,128,.4); background: rgba(128,128,128,.05); color: inherit;">
+          <option value="default" {if $FD_SORT == 'default'}selected{/if}>Domyślnie</option>
+          <option value="size_desc" {if $FD_SORT == 'size_desc'}selected{/if}>Rozmiar malejąco</option>
+          <option value="size_asc" {if $FD_SORT == 'size_asc'}selected{/if}>Rozmiar rosnąco</option>
+          <option value="count_desc" {if $FD_SORT == 'count_desc'}selected{/if}>Liczba zdjęć malejąco</option>
+          <option value="count_asc" {if $FD_SORT == 'count_asc'}selected{/if}>Liczba zdjęć rosnąco</option>
+          <option value="date_desc" {if $FD_SORT == 'date_desc'}selected{/if}>Od najnowszych</option>
+          <option value="date_asc" {if $FD_SORT == 'date_asc'}selected{/if}>Od najstarszych</option>
+          <option value="alpha_asc" {if $FD_SORT == 'alpha_asc'}selected{/if}>Alfabetycznie A-Z</option>
+          <option value="alpha_desc" {if $FD_SORT == 'alpha_desc'}selected{/if}>Alfabetycznie Z-A</option>
+        </select>
+      </div>
+    </div>
+
+    <script type="text/javascript">
+      document.getElementById('fd-sort-select').addEventListener('change', function() {
+        var actionUrl = "{$FD_ACTION_URL|escape:'javascript'}";
+        var similarity = "{$FD_SIMILARITY|escape:'javascript'}";
+        var sameAlbum = "{$FD_SAME_ALBUM|escape:'javascript'}";
+        var sortVal = this.value;
+        window.location.href = actionUrl + '&similarity=' + similarity + '&same_album=' + sameAlbum + '&sort=' + sortVal;
+      });
+    </script>
     
     <div class="fd-duplicates-list">
       {foreach from=$FD_DUPLICATES item=group}
@@ -233,19 +260,19 @@ function scanChunk() {
     {if $FD_TOTAL_PAGES > 1}
     <div class="fd-pagination">
       {if $FD_CURRENT_PAGE > 1}
-        <a href="{$FD_ACTION_URL}&similarity={$FD_SIMILARITY}&same_album={$FD_SAME_ALBUM}&p={$FD_CURRENT_PAGE-1}">Poprzednia</a>
+        <a href="{$FD_ACTION_URL}&similarity={$FD_SIMILARITY}&same_album={$FD_SAME_ALBUM}&sort={$FD_SORT}&p={$FD_CURRENT_PAGE-1}">Poprzednia</a>
       {/if}
       
       {for $p=$FD_START_PAGE to $FD_END_PAGE}
         {if $p == $FD_CURRENT_PAGE}
           <span class="fd-current">{$p}</span>
         {else}
-          <a href="{$FD_ACTION_URL}&similarity={$FD_SIMILARITY}&same_album={$FD_SAME_ALBUM}&p={$p}">{$p}</a>
+          <a href="{$FD_ACTION_URL}&similarity={$FD_SIMILARITY}&same_album={$FD_SAME_ALBUM}&sort={$FD_SORT}&p={$p}">{$p}</a>
         {/if}
       {/for}
       
       {if $FD_CURRENT_PAGE < $FD_TOTAL_PAGES}
-        <a href="{$FD_ACTION_URL}&similarity={$FD_SIMILARITY}&same_album={$FD_SAME_ALBUM}&p={$FD_CURRENT_PAGE+1}">Następna</a>
+        <a href="{$FD_ACTION_URL}&similarity={$FD_SIMILARITY}&same_album={$FD_SAME_ALBUM}&sort={$FD_SORT}&p={$FD_CURRENT_PAGE+1}">Następna</a>
       {/if}
     </div>
     {/if}
