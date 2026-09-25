@@ -89,6 +89,17 @@ if (isset($_GET['action']) && $_GET['action'] == 'delete_image') {
 
   $image_id = (int)$_GET['image_id'];
 
+  // Zapisanie rozmiaru pliku przed usunięciem
+  $file_size = 0;
+  $query = 'SELECT path FROM ' . IMAGES_TABLE . ' WHERE id = ' . $image_id;
+  $result = pwg_query($query);
+  if ($row = pwg_db_fetch_assoc($result)) {
+    $abs_path = PHPWG_ROOT_PATH . $row['path'];
+    if (file_exists($abs_path)) {
+      $file_size = filesize($abs_path);
+    }
+  }
+
   // Usunięcie zdjęcia korzystając z funkcji Piwigo
   include_once(PHPWG_ROOT_PATH . 'admin/include/functions.php');
   if (function_exists('delete_elements')) {
@@ -99,53 +110,31 @@ if (isset($_GET['action']) && $_GET['action'] == 'delete_image') {
     pwg_query('DELETE FROM ' . FIND_DUPLICATES_TABLE . ' WHERE image_id = ' . $image_id);
   }
 
-  // Odświeżenie Cache w locie
+  // Odświeżenie Cache w locie i zapisanie zaoszczędzonego miejsca
   global $conf;
+
+  $saved_space = isset($conf['find_duplicates_saved_space']) ? (int)$conf['find_duplicates_saved_space'] : 0;
+  if ($file_size > 0) {
+    $saved_space += $file_size;
+    conf_update_param('find_duplicates_saved_space', $saved_space);
+  }
+
   $cache_dir = PHPWG_ROOT_PATH . '_data/find_duplicates_cache';
-  $similarity_limit = isset($conf['find_duplicates_similarity']) ? (int)$conf['find_duplicates_similarity'] : 100;
-  $same_album = isset($conf['find_duplicates_same_album']) ? (int)$conf['find_duplicates_same_album'] : 0;
 
-  // Ponieważ usunęliśmy zdjęcie, hashed_images w rzeczywistości spadło o 1
-  $hashed_query = '
-    SELECT COUNT(h.image_id) AS c
-    FROM ' . FIND_DUPLICATES_TABLE . ' h
-    INNER JOIN ' . IMAGES_TABLE . ' i ON h.image_id = i.id';
-  $hashed_row = pwg_db_fetch_assoc(pwg_query($hashed_query));
-  $current_hashed_images = (int)$hashed_row['c'];
-
-  // Odczytujemy stary plik (przed usunięciem), gdzie zahashowanych było o 1 więcej
-  $old_hashed_images = $current_hashed_images + 1;
-  $old_cache_filename = $cache_dir . '/cache_s' . $similarity_limit . '_a' . $same_album . '_h' . $old_hashed_images . '.json';
-  $new_cache_filename = $cache_dir . '/cache_s' . $similarity_limit . '_a' . $same_album . '_h' . $current_hashed_images . '.json';
-
-  if (file_exists($old_cache_filename)) {
-    $cached_data = @file_get_contents($old_cache_filename);
-    if ($cached_data) {
-      $duplicates = json_decode($cached_data, true);
-      $new_duplicates = array();
-
-      foreach ($duplicates as $group) {
-        $filtered_images = array();
-        foreach ($group['IMAGES'] as $img) {
-          if ($img['ID'] != $image_id) {
-            $filtered_images[] = $img;
-          }
-        }
-
-        // Zostawiamy grupę, tylko jeśli zostało w niej więcej niż 1 zdjęcie
-        if (count($filtered_images) > 1) {
-          $group['IMAGES'] = $filtered_images;
-          $new_duplicates[] = $group;
-        }
-      }
-
-      // Zapisujemy nowy cache i usuwamy stary
-      @file_put_contents($new_cache_filename, json_encode($new_duplicates));
-      @unlink($old_cache_filename);
+  // Delete action must also use wildcard to clean cache if exact match fails
+  $files = glob($cache_dir . '/*.json');
+  if ($files) {
+    foreach ($files as $file) {
+      @unlink($file);
     }
   }
 
-  echo json_encode(array('status' => 'ok', 'message' => 'Image deleted and cache updated.'));
+  echo json_encode(array(
+    'status' => 'ok',
+    'message' => 'Image deleted and cache updated.',
+    'deleted_bytes' => $file_size,
+    'total_saved_bytes' => $saved_space
+  ));
   die();
 }
 
@@ -592,6 +581,8 @@ $template->assign(array(
   'FD_SHOW_HIDDEN' => $fd_show_hidden,
   'FD_TIME_INTERVAL' => $fd_time_interval,
   'FD_SEARCH_GROUP' => $fd_search_group,
+  'FD_TOTAL_SAVED_SPACE' => isset($saved_space_formatted) ? $saved_space_formatted : find_duplicates_format_bytes(isset($conf['find_duplicates_saved_space']) ? (int)$conf['find_duplicates_saved_space'] : 0),
+  'FD_SORT' => htmlspecialchars($sort_opt),
 ));
 
 $template->set_filenames(array('plugin_admin_content' => FIND_DUPLICATES_PATH . 'admin.tpl'));
