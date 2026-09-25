@@ -32,6 +32,15 @@ CREATE TABLE IF NOT EXISTS `' . $this->table . '` (
   function activate($plugin_version, &$errors = array())
   {
     $this->create_table();
+
+    // Set default config if not exists
+    global $conf;
+    if (!isset($conf['find_duplicates_similarity'])) {
+      conf_update_param('find_duplicates_similarity', 100);
+    }
+    if (!isset($conf['find_duplicates_same_album'])) {
+      conf_update_param('find_duplicates_same_album', 0);
+    }
   }
 
   function deactivate()
@@ -47,5 +56,7 @@ CREATE TABLE IF NOT EXISTS `' . $this->table . '` (
   function uninstall()
   {
     pwg_query('DROP TABLE IF EXISTS `' . $this->table . '`;');
+    conf_delete_param('find_duplicates_similarity');
+    conf_delete_param('find_duplicates_same_album');
   }
 }

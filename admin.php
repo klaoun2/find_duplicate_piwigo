@@ -61,6 +61,77 @@ if (isset($_GET['action']) && $_GET['action'] == 'scan')
   die();
 }
 
+// Handle AJAX image deletion
+if (isset($_GET['action']) && $_GET['action'] == 'delete_image') {
+  check_pwg_token();
+
+  if (!isset($_GET['image_id'])) {
+    echo json_encode(array('status' => 'error', 'error' => 'Missing image_id'));
+    die();
+  }
+
+  $image_id = (int)$_GET['image_id'];
+
+  // Usunięcie zdjęcia korzystając z funkcji Piwigo
+  include_once(PHPWG_ROOT_PATH . 'admin/include/functions.php');
+  if (function_exists('delete_elements')) {
+    delete_elements(array($image_id), true); // true = delete file from disk too
+  } else {
+    // If not found, attempt manual SQL delete just for safety
+    pwg_query('DELETE FROM ' . IMAGES_TABLE . ' WHERE id = ' . $image_id);
+    pwg_query('DELETE FROM ' . FIND_DUPLICATES_TABLE . ' WHERE image_id = ' . $image_id);
+  }
+
+  // Odświeżenie Cache w locie
+  global $conf;
+  $cache_dir = PHPWG_ROOT_PATH . '_data/find_duplicates_cache';
+  $similarity_limit = isset($conf['find_duplicates_similarity']) ? (int)$conf['find_duplicates_similarity'] : 100;
+  $same_album = isset($conf['find_duplicates_same_album']) ? (int)$conf['find_duplicates_same_album'] : 0;
+
+  // Ponieważ usunęliśmy zdjęcie, hashed_images w rzeczywistości spadło o 1
+  $hashed_query = '
+    SELECT COUNT(h.image_id) AS c
+    FROM ' . FIND_DUPLICATES_TABLE . ' h
+    INNER JOIN ' . IMAGES_TABLE . ' i ON h.image_id = i.id';
+  $hashed_row = pwg_db_fetch_assoc(pwg_query($hashed_query));
+  $current_hashed_images = (int)$hashed_row['c'];
+
+  // Odczytujemy stary plik (przed usunięciem), gdzie zahashowanych było o 1 więcej
+  $old_hashed_images = $current_hashed_images + 1;
+  $old_cache_filename = $cache_dir . '/cache_s' . $similarity_limit . '_a' . $same_album . '_h' . $old_hashed_images . '.json';
+  $new_cache_filename = $cache_dir . '/cache_s' . $similarity_limit . '_a' . $same_album . '_h' . $current_hashed_images . '.json';
+
+  if (file_exists($old_cache_filename)) {
+    $cached_data = @file_get_contents($old_cache_filename);
+    if ($cached_data) {
+      $duplicates = json_decode($cached_data, true);
+      $new_duplicates = array();
+
+      foreach ($duplicates as $group) {
+        $filtered_images = array();
+        foreach ($group['IMAGES'] as $img) {
+          if ($img['ID'] != $image_id) {
+            $filtered_images[] = $img;
+          }
+        }
+
+        // Zostawiamy grupę, tylko jeśli zostało w niej więcej niż 1 zdjęcie
+        if (count($filtered_images) > 1) {
+          $group['IMAGES'] = $filtered_images;
+          $new_duplicates[] = $group;
+        }
+      }
+
+      // Zapisujemy nowy cache i usuwamy stary
+      @file_put_contents($new_cache_filename, json_encode($new_duplicates));
+      @unlink($old_cache_filename);
+    }
+  }
+
+  echo json_encode(array('status' => 'ok', 'message' => 'Image deleted and cache updated.'));
+  die();
+}
+
 // Helper to calculate Hamming distance for 64-bit string
 function find_duplicates_hamming_distance($hash1, $hash2) {
   // ⚡ Bolt Optimization: Replace O(1) 64-iteration PHP loop with native C-level bitwise XOR + substr_count.
@@ -71,11 +142,26 @@ function find_duplicates_hamming_distance($hash1, $hash2) {
 }
 
 // User Settings
-$similarity_limit = isset($_GET['similarity']) ? (int)$_GET['similarity'] : 100;
-if ($similarity_limit < 80) $similarity_limit = 80;
-if ($similarity_limit > 100) $similarity_limit = 100;
+global $conf;
 
-$same_album = isset($_GET['same_album']) ? (int)$_GET['same_album'] : (!isset($_GET['similarity']) ? 1 : 0);
+// Determine if we need to save new settings
+if (isset($_GET['similarity'])) {
+  $similarity_limit = (int)$_GET['similarity'];
+  if ($similarity_limit < 80) $similarity_limit = 80;
+  if ($similarity_limit > 100) $similarity_limit = 100;
+
+  $same_album = isset($_GET['same_album']) ? 1 : 0;
+
+  // Save to db
+  conf_update_param('find_duplicates_similarity', $similarity_limit);
+  conf_update_param('find_duplicates_same_album', $same_album);
+  $conf['find_duplicates_similarity'] = $similarity_limit;
+  $conf['find_duplicates_same_album'] = $same_album;
+} else {
+  // Read from db or use defaults
+  $similarity_limit = isset($conf['find_duplicates_similarity']) ? (int)$conf['find_duplicates_similarity'] : 100;
+  $same_album = isset($conf['find_duplicates_same_album']) ? (int)$conf['find_duplicates_same_album'] : 0;
+}
 
 // User Settings for Pagination
 $current_page_idx = isset($_GET['p']) ? max(1, (int)$_GET['p']) : 1;
