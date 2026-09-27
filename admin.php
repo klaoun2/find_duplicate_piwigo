@@ -181,14 +181,17 @@ function find_duplicates_hamming_distance($hash1, $hash2) {
 global $conf;
 
 // Determine if we need to save new settings
-if (isset($_GET['similarity'])) {
-  $similarity_limit = (int)$_GET['similarity'];
+if (isset($_GET['similarity']) || isset($_GET['fd_mode'])) {
+  // Read similarity
+  $similarity_limit = isset($_GET['similarity']) ? (int)$_GET['similarity'] : (isset($conf['find_duplicates_similarity']) ? (int)$conf['find_duplicates_similarity'] : 100);
   if ($similarity_limit < 80) $similarity_limit = 80;
   if ($similarity_limit > 100) $similarity_limit = 100;
 
-  $same_album = (isset($_GET['same_album']) && $_GET['same_album'] == '1') ? 1 : 0;
+  // Read same_album
+  $same_album = isset($_GET['same_album']) ? ($_GET['same_album'] == '1' ? 1 : 0) : (isset($conf['find_duplicates_same_album']) ? (int)$conf['find_duplicates_same_album'] : 0);
   
-  $fd_mode = isset($_GET['fd_mode']) ? $_GET['fd_mode'] : 'visual';
+  // Read fd_mode
+  $fd_mode = isset($_GET['fd_mode']) ? $_GET['fd_mode'] : (isset($conf['find_duplicates_mode']) ? $conf['find_duplicates_mode'] : 'visual');
   if (!in_array($fd_mode, array('visual', 'time'))) $fd_mode = 'visual';
   
   $fd_show_hidden = (isset($_GET['fd_show_hidden']) && $_GET['fd_show_hidden'] == '1') ? 1 : 0;
@@ -199,18 +202,23 @@ if (isset($_GET['similarity'])) {
   // Save to db
   conf_update_param('find_duplicates_similarity', $similarity_limit);
   conf_update_param('find_duplicates_same_album', $same_album);
+  conf_update_param('find_duplicates_mode', $fd_mode);
+
+  // Update current config
   $conf['find_duplicates_similarity'] = $similarity_limit;
   $conf['find_duplicates_same_album'] = $same_album;
+  $conf['find_duplicates_mode'] = $fd_mode;
 } else {
   // Read from db or use defaults
   $similarity_limit = isset($conf['find_duplicates_similarity']) ? (int)$conf['find_duplicates_similarity'] : 100;
   $same_album = isset($conf['find_duplicates_same_album']) ? (int)$conf['find_duplicates_same_album'] : 0;
+
   // If explicitly overridden via URL, honor it temporarily without saving to conf for this view
   if (isset($_GET['same_album'])) {
       $same_album = $_GET['same_album'] == '1' ? 1 : 0;
   }
   
-  $fd_mode = isset($_GET['fd_mode']) ? $_GET['fd_mode'] : 'visual';
+  $fd_mode = isset($conf['find_duplicates_mode']) ? $conf['find_duplicates_mode'] : 'visual';
   if (!in_array($fd_mode, array('visual', 'time'))) $fd_mode = 'visual';
 
   $fd_show_hidden = (isset($_GET['fd_show_hidden']) && $_GET['fd_show_hidden'] == '1') ? 1 : 0;
