@@ -694,12 +694,14 @@ function scanChunk() {
 
               // If only 1 image left, close modal then fade out group
               if (updatedImages.length <= 1) {
-                closeModal(function() {
-                  groupEl.classList.add('fd-fading-out');
-                  setTimeout(function() {
-                    groupEl.style.display = 'none';
-                  }, 300);
-                });
+                closeModal();
+                groupEl.classList.add('fd-fading-out');
+                setTimeout(function() {
+                  groupEl.style.display = 'none';
+                }, 300);
+              } else {
+                // Check if the remaining images satisfy the "all favorites" condition
+                checkGroupStatusAndClose(updatedImages, groupEl);
               }
             }
           }, 300); // Wait for collapsing to finish
