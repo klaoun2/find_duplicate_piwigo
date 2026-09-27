@@ -232,6 +232,18 @@ function scanChunk() {
       <input type="checkbox" id="fd-show-hidden-chk" value="1" {if $FD_SHOW_HIDDEN}checked{/if}>
       Pokaż tylko ukryte ulubione
     </label>
+
+    <label>
+      Filtruj album:
+      <select id="fd-filter-album">
+        <option value="0">-- Wszystkie albumy --</option>
+        {foreach from=$FD_CATEGORIES item=cat}
+          <option value="{$cat.id}" {if $FD_FILTER_ALBUM == $cat.id}selected{/if}>
+            {$cat.display_name|replace:'&amp;nbsp;':'&nbsp;'}
+          </option>
+        {/foreach}
+      </select>
+    </label>
     
     <button type="submit" class="fd-btn">Zastosuj</button>
   </div>
@@ -261,10 +273,19 @@ function scanChunk() {
       var searchGroup = encodeURIComponent(document.getElementById('fd-search-group').value);
       var timeInterval = document.getElementById('fd-time-interval-select').value;
       
-      window.location.href = actionUrl + '&fd_mode=' + mode + '&similarity=' + sim + '&same_album=' + sameAlbum + '&fd_show_hidden=' + showHidden + '&fd_search_group=' + searchGroup + '&fd_time_interval=' + timeInterval;
+      var filterAlbum = document.getElementById("fd-filter-album") ? document.getElementById("fd-filter-album").value : 0;
+      window.location.href = actionUrl + "&fd_mode=" + mode + "&similarity=" + sim + "&same_album=" + sameAlbum + "&fd_show_hidden=" + showHidden + "&fd_search_group=" + searchGroup + "&fd_time_interval=" + timeInterval + "&fd_filter_album=" + filterAlbum;
   }
   
   // Auto-submit when hidden checkbox is toggled
+  // Auto-submit when filter album is changed
+  var filterAlbumSel = document.getElementById('fd-filter-album');
+  if (filterAlbumSel) {
+      filterAlbumSel.addEventListener('change', function() {
+          submitFilters();
+      });
+  }
+
   var hiddenChk = document.getElementById('fd-show-hidden-chk');
   if (hiddenChk) {
       hiddenChk.addEventListener('change', function() {
@@ -335,7 +356,8 @@ function scanChunk() {
         var timeInterval = "{$FD_TIME_INTERVAL|escape:'javascript'}";
         var sortVal = this.value;
         
-        window.location.href = actionUrl + '&fd_mode=' + mode + '&similarity=' + similarity + '&same_album=' + sameAlbum + '&fd_show_hidden=' + showHidden + '&fd_search_group=' + searchGroup + '&fd_time_interval=' + timeInterval + '&sort=' + sortVal;
+        var filterAlbum = document.getElementById("fd-filter-album") ? document.getElementById("fd-filter-album").value : 0;
+        window.location.href = actionUrl + "&fd_mode=" + mode + "&similarity=" + similarity + "&same_album=" + sameAlbum + "&fd_show_hidden=" + showHidden + "&fd_search_group=" + searchGroup + "&fd_time_interval=" + timeInterval + "&fd_filter_album=" + filterAlbum + "&sort=" + sortVal;
       });
     </script>
     
