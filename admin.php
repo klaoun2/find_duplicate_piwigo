@@ -292,6 +292,12 @@ if ($hashed_images > 0 && $hashed_images >= $total_images)
           }
         }
 
+        // Check for Motion Picture based on Google Pixel convention (.MP in filename before extension or at the end of the base name)
+        $has_motion = 0;
+        if (stripos($row['file'], '.MP') !== false || stripos($row['name'], '.MP') !== false) {
+            $has_motion = 1;
+        }
+
         $images_data[$img_id] = array(
           'ID' => $row['id'],
           'PATH' => $row['path'],
@@ -301,6 +307,7 @@ if ($hashed_images > 0 && $hashed_images >= $total_images)
           'PHASH' => $row['phash'],
           'DATE_CREATION' => $row['date_creation'],
           'HAS_GPS' => (!empty($row['latitude']) && !empty($row['longitude'])) ? 1 : 0,
+          'HAS_MOTION' => $has_motion,
           'FILE_SIZE' => $filesize_str,
           'FILE_SIZE_BYTES' => $bytes,
           'ALBUMS' => array()

@@ -358,6 +358,9 @@ function scanChunk() {
                   {if $img.HAS_GPS|default:0}
                     <span style="background: rgba(0,0,0,0.6); color: white; padding: 2px 5px; border-radius: 4px; font-size: 10px;" title="Posiada lokalizację GPS">📍</span>
                   {/if}
+                  {if $img.HAS_MOTION|default:0}
+                    <span style="background: rgba(0,0,0,0.6); color: white; padding: 2px 5px; border-radius: 4px; font-size: 10px;" title="Zarejestrowano jako Motion Picture">🎬</span>
+                  {/if}
                 </div>
                 {if $img.IS_FAVORITE}
                 <div style="color: #ffc107; font-size: 24px; position: absolute; top: -5px; left: 5px; text-shadow: 1px 1px 3px rgba(0,0,0,0.8);">★</div>
@@ -521,28 +524,22 @@ function scanChunk() {
       link.appendChild(image);
       wrap.appendChild(link);
 
-      var info = document.createElement('div');
-      info.className = 'fd-modal-img-info';
-      
-      var creationDate = img.DATE_CREATION ? img.DATE_CREATION : 'Nieznana';
-      var fileSize = img.FILE_SIZE ? img.FILE_SIZE : 'Brak danych';
+      var actionRow = document.createElement('div');
+      actionRow.style.display = 'flex';
+      actionRow.style.justifyContent = 'center';
+      actionRow.style.gap = '15px';
+      actionRow.style.margin = '15px 0';
+      actionRow.style.alignItems = 'center';
 
-      var albumsHtml = '';
-      if (img.ALBUMS) {
-         albumsHtml = '<strong>Albumy:</strong><ul>';
-         for (var cat_id in img.ALBUMS) {
-            albumsHtml += '<li>' + img.ALBUMS[cat_id] + '</li>';
-         }
-         albumsHtml += '</ul>';
-      }
-      
-      var gpsHtml = (img.HAS_GPS == 1) ? '<span style="color:#5cb85c; font-weight:bold;">📍 Zdjęcie posiada dane GPS</span><br>' : '';
-      
-      info.innerHTML = 'ID: ' + img.ID + '<br>' + 
-                       'Plik: ' + img.FILE + '<br>' + 
-                       'Data utworzenia: ' + creationDate + '<br>' +
-                       'Rozmiar: ' + fileSize + '<br><br>' + 
-                       gpsHtml + albumsHtml;
+      var favBtn = document.createElement('button');
+      var isFav = img.IS_FAVORITE == 1;
+      favBtn.className = 'fd-favorite-btn ' + (isFav ? 'active' : '');
+      favBtn.innerHTML = isFav ? '★' : '☆';
+      favBtn.title = 'Zaznacz/odznacz jako ulubione';
+      favBtn.style.margin = '0';
+      favBtn.onclick = function() {
+          toggleFavorite(img.ID, favBtn, img, groupEl);
+      };
 
       var delBtn = document.createElement('button');
       delBtn.className = 'fd-btn-danger';
@@ -552,20 +549,40 @@ function scanChunk() {
           deleteImage(img.ID, phash, wrap, groupEl);
         }
       };
-      
-      var favBtn = document.createElement('button');
-      var isFav = img.IS_FAVORITE == 1;
-      favBtn.className = 'fd-favorite-btn ' + (isFav ? 'active' : '');
-      favBtn.innerHTML = isFav ? '★' : '☆';
-      favBtn.title = 'Zaznacz/odznacz jako ulubione';
-      favBtn.style.display = 'block';
-      favBtn.style.margin = '10px auto';
-      favBtn.onclick = function() {
-          toggleFavorite(img.ID, favBtn, img, groupEl);
-      };
 
-      info.appendChild(favBtn);
-      info.appendChild(delBtn);
+      actionRow.appendChild(favBtn);
+      actionRow.appendChild(delBtn);
+
+      var info = document.createElement('div');
+      info.className = 'fd-modal-img-info';
+      info.style.fontSize = '12px'; // Zmniejszony rozmiar fontu
+      info.style.textAlign = 'left';
+      info.style.background = 'rgba(128,128,128,0.05)';
+      info.style.padding = '10px';
+      info.style.borderRadius = '6px';
+      info.style.display = 'inline-block';
+      
+      var creationDate = img.DATE_CREATION ? img.DATE_CREATION : 'Nieznana';
+      var fileSize = img.FILE_SIZE ? img.FILE_SIZE : 'Brak danych';
+
+      var albumsHtml = '';
+      if (img.ALBUMS) {
+         albumsHtml = '<strong>Albumy:</strong> <ul style="margin: 5px 0; padding-left: 20px;">';
+         for (var cat_id in img.ALBUMS) {
+            albumsHtml += '<li>' + img.ALBUMS[cat_id] + '</li>';
+         }
+         albumsHtml += '</ul>';
+      }
+      
+      var gpsHtml = (img.HAS_GPS == 1) ? '<span style="color:#5cb85c; font-weight:bold;">📍 Posiada GPS</span><br>' : '';
+      var motionHtml = (img.HAS_MOTION == 1) ? '<span style="color:#d9edf7; font-weight:bold;">🎬 Motion Picture</span><br>' : '';
+      
+      info.innerHTML = '<strong>ID:</strong> ' + img.ID + ' | <strong>Rozmiar:</strong> ' + fileSize + '<br>' +
+                       '<strong>Plik:</strong> ' + img.FILE + '<br>' +
+                       '<strong>Data:</strong> ' + creationDate + '<br>' +
+                       gpsHtml + motionHtml + albumsHtml;
+
+      wrap.appendChild(actionRow);
       wrap.appendChild(info);
       container.appendChild(wrap);
     });
