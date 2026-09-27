@@ -199,15 +199,19 @@ if (isset($_GET['similarity']) || isset($_GET['fd_mode'])) {
   $fd_time_interval = isset($_GET['fd_time_interval']) ? (int)$_GET['fd_time_interval'] : 15;
   $fd_search_group = isset($_GET['fd_search_group']) ? $_GET['fd_search_group'] : '';
 
+  $fd_filter_album = isset($_GET['fd_filter_album']) ? (int)$_GET['fd_filter_album'] : (isset($conf['find_duplicates_filter_album']) ? (int)$conf['find_duplicates_filter_album'] : 0);
+
   // Save to db
   conf_update_param('find_duplicates_similarity', $similarity_limit);
   conf_update_param('find_duplicates_same_album', $same_album);
   conf_update_param('find_duplicates_mode', $fd_mode);
+  conf_update_param('find_duplicates_filter_album', $fd_filter_album);
 
   // Update current config
   $conf['find_duplicates_similarity'] = $similarity_limit;
   $conf['find_duplicates_same_album'] = $same_album;
   $conf['find_duplicates_mode'] = $fd_mode;
+  $conf['find_duplicates_filter_album'] = $fd_filter_album;
 } else {
   // Read from db or use defaults
   $similarity_limit = isset($conf['find_duplicates_similarity']) ? (int)$conf['find_duplicates_similarity'] : 100;
@@ -225,13 +229,35 @@ if (isset($_GET['similarity']) || isset($_GET['fd_mode'])) {
   
   $fd_time_interval = isset($_GET['fd_time_interval']) ? (int)$_GET['fd_time_interval'] : 15;
   $fd_search_group = isset($_GET['fd_search_group']) ? $_GET['fd_search_group'] : '';
+  $fd_filter_album = isset($conf['find_duplicates_filter_album']) ? (int)$conf['find_duplicates_filter_album'] : 0;
 }
 
 // User Settings for Pagination
 $current_page_idx = isset($_GET['p']) ? max(1, (int)$_GET['p']) : 1;
 $items_per_page = 20;
 
+// ---------------------------------------------------------
+// Fetch All Categories for Filter
+// ---------------------------------------------------------
+$categories = array();
+$query = 'SELECT id, name, uppercats, global_rank FROM ' . CATEGORIES_TABLE . ' ORDER BY global_rank ASC';
+$result = pwg_query($query);
+while ($row = pwg_db_fetch_assoc($result)) {
+  $depth = substr_count($row['uppercats'], ',');
+  $indent = str_repeat('&nbsp;&nbsp;&nbsp;', $depth);
+  if ($depth > 0) $indent .= '- ';
+
+  $categories[] = array(
+    'id' => $row['id'],
+    'name' => $row['name'],
+    'uppercats' => $row['uppercats'],
+    'display_name' => $indent . htmlspecialchars($row['name'])
+  );
+}
+
+// ---------------------------------------------------------
 // Default Page View Data
+// ---------------------------------------------------------
 $total_query = 'SELECT COUNT(id) AS c FROM ' . IMAGES_TABLE;
 $total_row = pwg_db_fetch_assoc(pwg_query($total_query));
 $total_images = (int)$total_row['c'];
@@ -471,7 +497,21 @@ if (!empty($all_ids)) {
   }
 }
 
-// 2. Apply filtering for Search and Favorites
+// 2. Determine allowed album IDs for filtering (selected album + its sub-albums)
+$allowed_album_ids = array();
+if ($fd_filter_album > 0) {
+  $allowed_album_ids[$fd_filter_album] = true;
+  $filter_album_str = (string)$fd_filter_album;
+  foreach ($categories as $cat) {
+    // If uppercats contains the selected album ID, it's a sub-album
+    $uppercats_arr = explode(',', $cat['uppercats']);
+    if (in_array($filter_album_str, $uppercats_arr)) {
+      $allowed_album_ids[$cat['id']] = true;
+    }
+  }
+}
+
+// 3. Apply filtering for Search, Favorites and Album
 $filtered_duplicates = array();
 $album_counts = array();
 $total_images_in_groups = 0;
@@ -480,15 +520,35 @@ foreach ($duplicates as $group) {
   $all_favorites = true;
   $group_images_updated = array();
   
+  $has_allowed_album = false;
+
   foreach ($group['IMAGES'] as $img) {
     $img['IS_FAVORITE'] = isset($favorites_map[$img['ID']]) ? 1 : 0;
     $img['ALBUM_COUNT'] = count($img['ALBUMS']);
     if ($img['IS_FAVORITE'] == 0) {
       $all_favorites = false;
     }
+
+    // Check if this image belongs to any of the allowed albums
+    if (!empty($allowed_album_ids)) {
+      foreach (array_keys($img['ALBUMS']) as $album_id) {
+        if (isset($allowed_album_ids[$album_id])) {
+          $has_allowed_album = true;
+          break;
+        }
+      }
+    } else {
+      $has_allowed_album = true; // No filter selected
+    }
+
     $group_images_updated[] = $img;
   }
   
+  // Filter out groups based on Album selection
+  if (!$has_allowed_album) {
+    continue;
+  }
+
   // Filter out groups based on favorites logic
   if ($fd_show_hidden && !$all_favorites) {
     continue; // When show_hidden is checked, show ONLY groups where all are favorites
@@ -598,6 +658,8 @@ $template->assign(array(
   'FD_SEARCH_GROUP' => $fd_search_group,
   'FD_TOTAL_SAVED_SPACE' => isset($saved_space_formatted) ? $saved_space_formatted : find_duplicates_format_bytes(isset($conf['find_duplicates_saved_space']) ? (int)$conf['find_duplicates_saved_space'] : 0),
   'FD_SORT' => htmlspecialchars($sort_opt),
+  'FD_CATEGORIES' => $categories,
+  'FD_FILTER_ALBUM' => $fd_filter_album,
 ));
 
 $template->set_filenames(array('plugin_admin_content' => FIND_DUPLICATES_PATH . 'admin.tpl'));
