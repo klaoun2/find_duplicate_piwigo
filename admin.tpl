@@ -93,6 +93,20 @@
 .fd-favorite-btn.active { background: rgba(255,193,7,0.3); font-weight: bold; text-shadow: 0 0 5px rgba(255,193,7,0.5); }
 .fd-favorite-btn:hover { background: rgba(255,193,7,0.4); }
 
+.fd-favorite-all-btn {
+  background: rgba(255,193,7,0.1);
+  border: 1px solid rgba(255,193,7,0.5);
+  color: #ffc107;
+  cursor: pointer;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: bold;
+  transition: 0.2s;
+  vertical-align: middle;
+}
+.fd-favorite-all-btn:hover { background: rgba(255,193,7,0.2); }
+
 .fd-search-bar { display: flex; gap: 10px; margin-bottom: 20px; align-items: center; }
 .fd-search-bar input { padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(128,128,128,.4); background: rgba(128,128,128,.1); color: inherit; flex-grow: 1; max-width: 300px; }
 
@@ -472,12 +486,12 @@ function scanChunk() {
     var titleEl = document.getElementById('fd-modal-title');
     titleEl.innerHTML = ''; // wyczyszczenie
 
-    var titleText = document.createTextNode(title + ' (Hash: ' + phash + ') ');
+    var titleText = document.createTextNode(title + ' ');
     titleEl.appendChild(titleText);
 
     var favAllBtn = document.createElement('button');
-    favAllBtn.className = 'fd-btn';
-    favAllBtn.innerHTML = 'Dodaj wszystkie do ulubionych';
+    favAllBtn.className = 'fd-favorite-all-btn';
+    favAllBtn.innerHTML = '★ Oznacz wszystkie';
     favAllBtn.style.marginLeft = '15px';
     favAllBtn.onclick = function() {
       // Find all favorite buttons inside modal that are NOT active
