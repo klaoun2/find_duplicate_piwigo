@@ -55,7 +55,7 @@
 .fd-modal-img-wrap { text-align: center; background: rgba(128,128,128,.1); padding: 15px; border-radius: 8px; border: 1px solid rgba(128,128,128,.3); max-width: 45%; flex-grow: 1; transition: opacity 0.3s ease, transform 0.3s ease, max-width 0.3s ease, padding 0.3s ease, margin 0.3s ease, border-width 0.3s ease, flex-grow 0.3s ease; transform-origin: top center; overflow: hidden; }
 .fd-modal-img-wrap.fd-collapsing { opacity: 0; transform: scale(0.8); max-width: 0; padding-left: 0; padding-right: 0; margin-left: 0; margin-right: 0; border-width: 0; flex-grow: 0.0001; }
 .fd-modal-img-wrap img { max-width: 100%; max-height: 80vh; object-fit: contain; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
-.fd-modal-img-info { margin: 15px 0; font-size: 14px; word-break: break-all; }
+.fd-modal-img-info { margin: 2px 0; font-size: 14px; word-break: break-all; }
 .fd-btn-danger { background: rgba(220, 53, 69, 0.2); border: 1px solid rgba(220, 53, 69, 0.5); color: inherit; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px; transition: 0.2s; }
 .fd-btn-danger:hover { background: rgba(220, 53, 69, 0.5); }
 .fd-btn-danger:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -94,13 +94,13 @@
 .fd-favorite-btn:hover { background: rgba(255,193,7,0.4); }
 
 .fd-favorite-all-btn {
-  background: rgba(255,193,7,0.1);
-  border: 1px solid rgba(255,193,7,0.5);
-  color: #ffc107;
-  cursor: pointer;
-  padding: 6px 12px;
-  border-radius: 6px;
-  font-size: 13px;
+  background: rgba(255,193,7,0.1); 
+  border: 1px solid rgba(255,193,7,0.5); 
+  color: #ffc107; 
+  cursor: pointer; 
+  padding: 6px 12px; 
+  border-radius: 6px; 
+  font-size: 13px; 
   font-weight: bold;
   transition: 0.2s;
   vertical-align: middle;
@@ -488,10 +488,10 @@ function scanChunk() {
   function openModal(title, phash, images, groupEl) {
     var titleEl = document.getElementById('fd-modal-title');
     titleEl.innerHTML = ''; // wyczyszczenie
-
+    
     var titleText = document.createTextNode(title + ' ');
     titleEl.appendChild(titleText);
-
+    
     var favAllBtn = document.createElement('button');
     favAllBtn.className = 'fd-favorite-all-btn';
     favAllBtn.innerHTML = '★ Oznacz wszystkie';
@@ -504,7 +504,7 @@ function scanChunk() {
       });
     };
     titleEl.appendChild(favAllBtn);
-
+    
     var container = document.getElementById('fd-modal-images');
     container.innerHTML = '';
 
@@ -558,7 +558,7 @@ function scanChunk() {
       info.style.fontSize = '12px'; // Zmniejszony rozmiar fontu
       info.style.textAlign = 'left';
       info.style.background = 'rgba(128,128,128,0.05)';
-      info.style.padding = '10px';
+      info.style.padding = '4px';
       info.style.borderRadius = '6px';
       info.style.display = 'inline-block';
       
@@ -577,8 +577,8 @@ function scanChunk() {
       var gpsHtml = (img.HAS_GPS == 1) ? '<span style="color:#5cb85c; font-weight:bold;">📍 Posiada GPS</span><br>' : '';
       var motionHtml = (img.HAS_MOTION == 1) ? '<span style="color:#d9edf7; font-weight:bold;">🎬 Motion Picture</span><br>' : '';
       
-      info.innerHTML = '<strong>ID:</strong> ' + img.ID + ' | <strong>Rozmiar:</strong> ' + fileSize + '<br>' +
-                       '<strong>Plik:</strong> ' + img.FILE + '<br>' +
+      info.innerHTML = '<strong>ID:</strong> ' + img.ID + ' | <strong>Rozmiar:</strong> ' + fileSize + '<br>' + 
+                       '<strong>Plik:</strong> ' + img.FILE + '<br>' + 
                        '<strong>Data:</strong> ' + creationDate + '<br>' +
                        gpsHtml + motionHtml + albumsHtml;
 
@@ -627,7 +627,7 @@ function scanChunk() {
                 return img;
             });
             groupEl.setAttribute('data-images', JSON.stringify(updatedImages));
-
+            
             checkGroupStatusAndClose(updatedImages, groupEl);
           }
         } else {
@@ -647,7 +647,7 @@ function scanChunk() {
   function checkGroupStatusAndClose(images, groupEl) {
     var showHiddenChk = document.getElementById('fd-show-hidden-chk');
     var showHidden = showHiddenChk ? showHiddenChk.checked : false;
-
+    
     var allFavorites = true;
     for (var i = 0; i < images.length; i++) {
         if (images[i].IS_FAVORITE != 1) {
@@ -655,14 +655,14 @@ function scanChunk() {
             break;
         }
     }
-
+    
     var shouldFadeOut = false;
     if (showHidden) {
       shouldFadeOut = !allFavorites;
     } else {
       shouldFadeOut = allFavorites;
     }
-
+    
     if (shouldFadeOut) {
       // Use setTimeout to allow the button to visually update before closing
       setTimeout(function() {
