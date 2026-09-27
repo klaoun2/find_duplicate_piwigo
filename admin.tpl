@@ -469,7 +469,25 @@ function scanChunk() {
   }
 
   function openModal(title, phash, images, groupEl) {
-    document.getElementById('fd-modal-title').innerText = title + ' (Hash: ' + phash + ')';
+    var titleEl = document.getElementById('fd-modal-title');
+    titleEl.innerHTML = ''; // wyczyszczenie
+
+    var titleText = document.createTextNode(title + ' (Hash: ' + phash + ') ');
+    titleEl.appendChild(titleText);
+
+    var favAllBtn = document.createElement('button');
+    favAllBtn.className = 'fd-btn';
+    favAllBtn.innerHTML = 'Dodaj wszystkie do ulubionych';
+    favAllBtn.style.marginLeft = '15px';
+    favAllBtn.onclick = function() {
+      // Find all favorite buttons inside modal that are NOT active
+      var buttons = document.getElementById('fd-modal-images').querySelectorAll('.fd-favorite-btn:not(.active)');
+      buttons.forEach(function(btn) {
+        btn.click();
+      });
+    };
+    titleEl.appendChild(favAllBtn);
+
     var container = document.getElementById('fd-modal-images');
     container.innerHTML = '';
 
@@ -578,6 +596,8 @@ function scanChunk() {
                 return img;
             });
             groupEl.setAttribute('data-images', JSON.stringify(updatedImages));
+
+            checkGroupStatusAndClose(updatedImages, groupEl);
           }
         } else {
           alert('Błąd: ' + (data.error || 'Nieznany błąd'));
@@ -591,6 +611,37 @@ function scanChunk() {
         btnEl.innerHTML = originalText;
         btnEl.disabled = false;
       });
+  }
+
+  function checkGroupStatusAndClose(images, groupEl) {
+    var showHiddenChk = document.getElementById('fd-show-hidden-chk');
+    var showHidden = showHiddenChk ? showHiddenChk.checked : false;
+
+    var allFavorites = true;
+    for (var i = 0; i < images.length; i++) {
+        if (images[i].IS_FAVORITE != 1) {
+            allFavorites = false;
+            break;
+        }
+    }
+
+    var shouldFadeOut = false;
+    if (showHidden) {
+      shouldFadeOut = !allFavorites;
+    } else {
+      shouldFadeOut = allFavorites;
+    }
+
+    if (shouldFadeOut) {
+      // Use setTimeout to allow the button to visually update before closing
+      setTimeout(function() {
+        closeModal();
+        groupEl.classList.add('fd-fading-out');
+        setTimeout(function() {
+          groupEl.style.display = 'none';
+        }, 300);
+      }, 150);
+    }
   }
 
   function deleteImage(imageId, groupPhash, wrapEl, groupEl) {
