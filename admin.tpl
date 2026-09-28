@@ -613,7 +613,8 @@ function scanChunk() {
 
       var albumsHtml = '';
       if (img.ALBUMS) {
-         albumsHtml = '<strong>Albumy:</strong> <ul style="margin: 5px 0; padding-left: 20px;">';
+         var albumCount = Object.keys(img.ALBUMS).length;
+         albumsHtml = '<strong>Albumy (' + albumCount + '):</strong> <ul style="margin: 0; padding-left: 15px;">';
          for (var cat_id in img.ALBUMS) {
             albumsHtml += '<li>' + img.ALBUMS[cat_id] + '</li>';
          }

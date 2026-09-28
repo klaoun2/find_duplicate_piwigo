@@ -196,7 +196,7 @@ if (isset($_GET['similarity']) || isset($_GET['fd_mode'])) {
   
   $fd_show_hidden = (isset($_GET['fd_show_hidden']) && $_GET['fd_show_hidden'] == '1') ? 1 : 0;
 
-  $fd_time_interval = isset($_GET['fd_time_interval']) ? (int)$_GET['fd_time_interval'] : 15;
+  $fd_time_interval = isset($_GET['fd_time_interval']) ? (int)$_GET['fd_time_interval'] : (isset($conf['find_duplicates_time_interval']) ? (int)$conf['find_duplicates_time_interval'] : 15);
   $fd_search_group = isset($_GET['fd_search_group']) ? $_GET['fd_search_group'] : '';
 
   $fd_filter_album = isset($_GET['fd_filter_album']) ? (int)$_GET['fd_filter_album'] : (isset($conf['find_duplicates_filter_album']) ? (int)$conf['find_duplicates_filter_album'] : 0);
@@ -209,6 +209,7 @@ if (isset($_GET['similarity']) || isset($_GET['fd_mode'])) {
   conf_update_param('find_duplicates_mode', $fd_mode);
   conf_update_param('find_duplicates_filter_album', $fd_filter_album);
   conf_update_param('find_duplicates_image_size', $fd_image_size);
+  conf_update_param('find_duplicates_time_interval', $fd_time_interval);
 
   // Update current config
   $conf['find_duplicates_similarity'] = $similarity_limit;
@@ -216,6 +217,7 @@ if (isset($_GET['similarity']) || isset($_GET['fd_mode'])) {
   $conf['find_duplicates_mode'] = $fd_mode;
   $conf['find_duplicates_filter_album'] = $fd_filter_album;
   $conf['find_duplicates_image_size'] = $fd_image_size;
+  $conf['find_duplicates_time_interval'] = $fd_time_interval;
 } else {
   // Read from db or use defaults
   $similarity_limit = isset($conf['find_duplicates_similarity']) ? (int)$conf['find_duplicates_similarity'] : 100;
@@ -231,7 +233,7 @@ if (isset($_GET['similarity']) || isset($_GET['fd_mode'])) {
 
   $fd_show_hidden = (isset($_GET['fd_show_hidden']) && $_GET['fd_show_hidden'] == '1') ? 1 : 0;
   
-  $fd_time_interval = isset($_GET['fd_time_interval']) ? (int)$_GET['fd_time_interval'] : 15;
+  $fd_time_interval = isset($conf['find_duplicates_time_interval']) ? (int)$conf['find_duplicates_time_interval'] : 15;
   $fd_search_group = isset($_GET['fd_search_group']) ? $_GET['fd_search_group'] : '';
   $fd_filter_album = isset($conf['find_duplicates_filter_album']) ? (int)$conf['find_duplicates_filter_album'] : 0;
 
