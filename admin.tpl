@@ -123,7 +123,7 @@
 <div id="fd-main">
 
 <div class="titrePage">
-  <h2>Wyszukiwarka Duplikatów <span class="fd-saved-space-badge" id="fd-top-saved-space">Zaoszczędzone miejsce: {$FD_TOTAL_SAVED_SPACE}</span></h2>
+  <h2>Wyszukiwarka Duplikatów <span style="font-size: 14px; opacity: 0.6; font-weight: normal; margin-left: 10px;">v{$FD_VERSION|default:'1.0.0'}</span> <span class="fd-saved-space-badge" id="fd-top-saved-space">Zaoszczędzone miejsce: {$FD_TOTAL_SAVED_SPACE}</span></h2>
 </div>
 
 <div class="fd-toast-container" id="fd-toast-container"></div>
