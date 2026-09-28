@@ -1,7 +1,7 @@
 <?php
 /*
 Plugin Name: Find Duplicates
-Version: 1.0.0
+Version: 1.0.1
 Description: Narzędzie do wyszukiwania duplikatów i podobnych zdjęć (pHash/dHash).
 Plugin URI: 
 Author: Jules
@@ -13,7 +13,7 @@ defined('PHPWG_ROOT_PATH') or die('Hacking attempt!');
 define('FIND_DUPLICATES_ID', basename(dirname(__FILE__)));
 define('FIND_DUPLICATES_PATH', PHPWG_PLUGINS_PATH . FIND_DUPLICATES_ID . '/');
 define('FIND_DUPLICATES_ADMIN', get_root_url() . 'admin.php?page=plugin-' . FIND_DUPLICATES_ID);
-define('FIND_DUPLICATES_VERSION', '1.0.0');
+define('FIND_DUPLICATES_VERSION', '1.0.1');
 
 global $prefixeTable;
 define('FIND_DUPLICATES_TABLE', $prefixeTable . 'find_duplicates_hashes');
