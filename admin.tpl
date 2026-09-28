@@ -54,7 +54,7 @@
 .fd-modal-images { display: flex; flex-wrap: wrap; gap: 20px; margin-top: 20px; justify-content: center; }
 .fd-modal-img-wrap { text-align: center; background: rgba(128,128,128,.1); padding: 15px; border-radius: 8px; border: 1px solid rgba(128,128,128,.3); max-width: 45%; flex-grow: 1; transition: opacity 0.3s ease, transform 0.3s ease, max-width 0.3s ease, padding 0.3s ease, margin 0.3s ease, border-width 0.3s ease, flex-grow 0.3s ease; transform-origin: top center; overflow: hidden; }
 .fd-modal-img-wrap.fd-collapsing { opacity: 0; transform: scale(0.8); max-width: 0; padding-left: 0; padding-right: 0; margin-left: 0; margin-right: 0; border-width: 0; flex-grow: 0.0001; }
-.fd-modal-img-wrap img { max-width: 100%; max-height: 80vh; object-fit: contain; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+.fd-modal-img-wrap img { max-width: 100%; max-height: {$FD_IMAGE_SIZE}vh; object-fit: contain; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
 .fd-modal-img-info { margin: 2px 0; font-size: 14px; word-break: break-all; }
 .fd-btn-danger { background: rgba(220, 53, 69, 0.2); border: 1px solid rgba(220, 53, 69, 0.5); color: inherit; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px; transition: 0.2s; }
 .fd-btn-danger:hover { background: rgba(220, 53, 69, 0.5); }
@@ -229,8 +229,17 @@ function scanChunk() {
     </label>
     
     <label style="margin-left: auto; color: #ffc107;">
-      <input type="checkbox" id="fd-show-hidden-chk" value="1" {if $FD_SHOW_HIDDEN}checked{/if}>
-      Pokaż tylko ukryte ulubione
+      <input type="checkbox" id="fd-show-hidden-chk" value="1" {if $FD_SHOW_HIDDEN}checked{/if} style="display:none;">
+      <span title="Pokaż tylko ukryte ulubione" style="font-size: 20px; cursor: pointer; text-shadow: 1px 1px 2px rgba(0,0,0,0.3); opacity: {if $FD_SHOW_HIDDEN}1{else}0.5{/if};">★</span>
+    </label>
+
+    <label>
+      Rozmiar obrazka:
+      <select id="fd-image-size-select" style="padding: 5px; border-radius: 4px; background: rgba(128,128,128,.1); color: inherit; border: 1px solid rgba(128,128,128,.4);">
+        <option value="50" {if $FD_IMAGE_SIZE == 50}selected{/if}>50 vh</option>
+        <option value="80" {if $FD_IMAGE_SIZE == 80}selected{/if}>80 vh</option>
+        <option value="100" {if $FD_IMAGE_SIZE == 100}selected{/if}>100 vh</option>
+      </select>
     </label>
 
     <label>
@@ -274,7 +283,8 @@ function scanChunk() {
       var timeInterval = document.getElementById('fd-time-interval-select').value;
       
       var filterAlbum = document.getElementById("fd-filter-album") ? document.getElementById("fd-filter-album").value : 0;
-      window.location.href = actionUrl + "&fd_mode=" + mode + "&similarity=" + sim + "&same_album=" + sameAlbum + "&fd_show_hidden=" + showHidden + "&fd_search_group=" + searchGroup + "&fd_time_interval=" + timeInterval + "&fd_filter_album=" + filterAlbum;
+      var imageSize = document.getElementById("fd-image-size-select") ? document.getElementById("fd-image-size-select").value : 80;
+      window.location.href = actionUrl + "&fd_mode=" + mode + "&similarity=" + sim + "&same_album=" + sameAlbum + "&fd_show_hidden=" + showHidden + "&fd_search_group=" + searchGroup + "&fd_time_interval=" + timeInterval + "&fd_filter_album=" + filterAlbum + "&fd_image_size=" + imageSize;
   }
   
   // Auto-submit when hidden checkbox is toggled
@@ -282,6 +292,13 @@ function scanChunk() {
   var filterAlbumSel = document.getElementById('fd-filter-album');
   if (filterAlbumSel) {
       filterAlbumSel.addEventListener('change', function() {
+          submitFilters();
+      });
+  }
+
+  var imageSizeSel = document.getElementById('fd-image-size-select');
+  if (imageSizeSel) {
+      imageSizeSel.addEventListener('change', function() {
           submitFilters();
       });
   }
@@ -300,8 +317,9 @@ function scanChunk() {
           var mode = this.getAttribute('data-mode');
           var sim = document.getElementById('fd-similarity-range').value;
           var sameAlbum = chk.checked ? 1 : 0;
+          var imageSize = document.getElementById('fd-image-size-select') ? document.getElementById('fd-image-size-select').value : 80;
           // Do not carry over search and hidden states to avoid sticky confusion
-          window.location.href = actionUrl + '&fd_mode=' + mode + '&similarity=' + sim + '&same_album=' + sameAlbum;
+          window.location.href = actionUrl + '&fd_mode=' + mode + '&similarity=' + sim + '&same_album=' + sameAlbum + '&fd_image_size=' + imageSize;
       });
   });
   
@@ -356,8 +374,9 @@ function scanChunk() {
         var timeInterval = "{$FD_TIME_INTERVAL|escape:'javascript'}";
         var sortVal = this.value;
         
+        var imageSize = document.getElementById('fd-image-size-select') ? document.getElementById('fd-image-size-select').value : 80;
         var filterAlbum = document.getElementById("fd-filter-album") ? document.getElementById("fd-filter-album").value : 0;
-        window.location.href = actionUrl + "&fd_mode=" + mode + "&similarity=" + similarity + "&same_album=" + sameAlbum + "&fd_show_hidden=" + showHidden + "&fd_search_group=" + searchGroup + "&fd_time_interval=" + timeInterval + "&fd_filter_album=" + filterAlbum + "&sort=" + sortVal;
+        window.location.href = actionUrl + "&fd_mode=" + mode + "&similarity=" + similarity + "&same_album=" + sameAlbum + "&fd_show_hidden=" + showHidden + "&fd_search_group=" + searchGroup + "&fd_time_interval=" + timeInterval + "&fd_filter_album=" + filterAlbum + "&fd_image_size=" + imageSize + "&sort=" + sortVal;
       });
     </script>
     
@@ -397,19 +416,19 @@ function scanChunk() {
     {if $FD_TOTAL_PAGES > 1}
     <div class="fd-pagination">
       {if $FD_CURRENT_PAGE > 1}
-        <a href="{$FD_ACTION_URL}&fd_mode={$FD_MODE}&similarity={$FD_SIMILARITY}&same_album={$FD_SAME_ALBUM}&fd_show_hidden={$FD_SHOW_HIDDEN}&fd_search_group={$FD_SEARCH_GROUP|escape:'url'}&fd_time_interval={$FD_TIME_INTERVAL}&sort={$FD_SORT}&p={$FD_CURRENT_PAGE-1}">Poprzednia</a>
+        <a href="{$FD_ACTION_URL}&fd_mode={$FD_MODE}&similarity={$FD_SIMILARITY}&same_album={$FD_SAME_ALBUM}&fd_show_hidden={$FD_SHOW_HIDDEN}&fd_search_group={$FD_SEARCH_GROUP|escape:'url'}&fd_time_interval={$FD_TIME_INTERVAL}&fd_image_size={$FD_IMAGE_SIZE}&sort={$FD_SORT}&p={$FD_CURRENT_PAGE-1}">Poprzednia</a>
       {/if}
       
       {for $p=$FD_START_PAGE to $FD_END_PAGE}
         {if $p == $FD_CURRENT_PAGE}
           <span class="fd-current">{$p}</span>
         {else}
-          <a href="{$FD_ACTION_URL}&fd_mode={$FD_MODE}&similarity={$FD_SIMILARITY}&same_album={$FD_SAME_ALBUM}&fd_show_hidden={$FD_SHOW_HIDDEN}&fd_search_group={$FD_SEARCH_GROUP|escape:'url'}&fd_time_interval={$FD_TIME_INTERVAL}&sort={$FD_SORT}&p={$p}">{$p}</a>
+          <a href="{$FD_ACTION_URL}&fd_mode={$FD_MODE}&similarity={$FD_SIMILARITY}&same_album={$FD_SAME_ALBUM}&fd_show_hidden={$FD_SHOW_HIDDEN}&fd_search_group={$FD_SEARCH_GROUP|escape:'url'}&fd_time_interval={$FD_TIME_INTERVAL}&fd_image_size={$FD_IMAGE_SIZE}&sort={$FD_SORT}&p={$p}">{$p}</a>
         {/if}
       {/for}
       
       {if $FD_CURRENT_PAGE < $FD_TOTAL_PAGES}
-        <a href="{$FD_ACTION_URL}&fd_mode={$FD_MODE}&similarity={$FD_SIMILARITY}&same_album={$FD_SAME_ALBUM}&fd_show_hidden={$FD_SHOW_HIDDEN}&fd_search_group={$FD_SEARCH_GROUP|escape:'url'}&fd_time_interval={$FD_TIME_INTERVAL}&sort={$FD_SORT}&p={$FD_CURRENT_PAGE+1}">Następna</a>
+        <a href="{$FD_ACTION_URL}&fd_mode={$FD_MODE}&similarity={$FD_SIMILARITY}&same_album={$FD_SAME_ALBUM}&fd_show_hidden={$FD_SHOW_HIDDEN}&fd_search_group={$FD_SEARCH_GROUP|escape:'url'}&fd_time_interval={$FD_TIME_INTERVAL}&fd_image_size={$FD_IMAGE_SIZE}&sort={$FD_SORT}&p={$FD_CURRENT_PAGE+1}">Następna</a>
       {/if}
     </div>
     {/if}
@@ -563,9 +582,14 @@ function scanChunk() {
           toggleFavorite(img.ID, favBtn, img, groupEl);
       };
 
-      var delBtn = document.createElement('button');
+            var delBtn = document.createElement('button');
       delBtn.className = 'fd-btn-danger';
-      delBtn.innerHTML = 'Usuń zdjęcie';
+      delBtn.innerHTML = '🗑️';
+      delBtn.title = 'Usuń zdjęcie';
+      delBtn.style.fontSize = '18px';
+      delBtn.style.padding = '8px 12px';
+      delBtn.style.lineHeight = '1';
+      delBtn.style.margin = '0';
       delBtn.onclick = function() {
         if(confirm('Czy na pewno chcesz bezpowrotnie usunąć to zdjęcie (ID: ' + img.ID + ')?')) {
           deleteImage(img.ID, phash, wrap, groupEl);
@@ -596,13 +620,16 @@ function scanChunk() {
          albumsHtml += '</ul>';
       }
       
-      var gpsHtml = (img.HAS_GPS == 1) ? '<span style="color:#5cb85c; font-weight:bold;">📍 Posiada GPS</span><br>' : '';
-      var motionHtml = (img.HAS_MOTION == 1) ? '<span style="color:#d9edf7; font-weight:bold;">🎬 Motion Picture</span><br>' : '';
-      
-      info.innerHTML = '<strong>ID:</strong> ' + img.ID + ' | <strong>Rozmiar:</strong> ' + fileSize + '<br>' + 
-                       '<strong>Plik:</strong> ' + img.FILE + '<br>' + 
-                       '<strong>Data:</strong> ' + creationDate + '<br>' +
-                       gpsHtml + motionHtml + albumsHtml;
+            var gpsHtml = (img.HAS_GPS == 1) ? '<span style="color:#5cb85c; font-weight:bold; margin-right: 10px;">📍 Posiada GPS</span>' : '';
+      var motionHtml = (img.HAS_MOTION == 1) ? '<span style="color:#d9edf7; font-weight:bold;">🎬 Motion Picture</span>' : '';
+
+      var motionAndGps = (gpsHtml || motionHtml) ? (gpsHtml + motionHtml + '<br>') : '';
+
+      info.innerHTML = '<strong>Data:</strong> ' + creationDate + '<br>' +
+                       motionAndGps +
+                       albumsHtml +
+                       '<strong>Rozmiar:</strong> ' + fileSize + '<br>' +
+                       '<strong>ID:</strong> ' + img.ID + ' | <strong>Plik:</strong> ' + img.FILE;
 
       wrap.appendChild(actionRow);
       wrap.appendChild(info);
@@ -700,7 +727,7 @@ function scanChunk() {
   function deleteImage(imageId, groupPhash, wrapEl, groupEl) {
     var btn = wrapEl.querySelector('.fd-btn-danger');
     var originalText = btn.innerHTML;
-    btn.innerHTML = 'Usuwanie...';
+    btn.innerHTML = '⏳';
     btn.disabled = true;
 
     var url = actionUrl + '&action=delete_image&image_id=' + imageId + '&pwg_token=' + pwgToken;
@@ -709,7 +736,7 @@ function scanChunk() {
       .then(response => response.json())
       .then(data => {
         if (data.status === 'ok') {
-          btn.innerHTML = 'Usunięto';
+          btn.innerHTML = '✔️';
 
           // Format bytes for toast
           var deletedFormatted = formatBytes(data.deleted_bytes || 0);

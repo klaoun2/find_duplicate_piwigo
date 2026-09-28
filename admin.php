@@ -200,18 +200,22 @@ if (isset($_GET['similarity']) || isset($_GET['fd_mode'])) {
   $fd_search_group = isset($_GET['fd_search_group']) ? $_GET['fd_search_group'] : '';
 
   $fd_filter_album = isset($_GET['fd_filter_album']) ? (int)$_GET['fd_filter_album'] : (isset($conf['find_duplicates_filter_album']) ? (int)$conf['find_duplicates_filter_album'] : 0);
+  $fd_image_size = isset($_GET['fd_image_size']) ? (int)$_GET['fd_image_size'] : (isset($conf['find_duplicates_image_size']) ? (int)$conf['find_duplicates_image_size'] : 80);
+  if (!in_array($fd_image_size, array(50, 80, 100))) $fd_image_size = 80;
 
   // Save to db
   conf_update_param('find_duplicates_similarity', $similarity_limit);
   conf_update_param('find_duplicates_same_album', $same_album);
   conf_update_param('find_duplicates_mode', $fd_mode);
   conf_update_param('find_duplicates_filter_album', $fd_filter_album);
+  conf_update_param('find_duplicates_image_size', $fd_image_size);
 
   // Update current config
   $conf['find_duplicates_similarity'] = $similarity_limit;
   $conf['find_duplicates_same_album'] = $same_album;
   $conf['find_duplicates_mode'] = $fd_mode;
   $conf['find_duplicates_filter_album'] = $fd_filter_album;
+  $conf['find_duplicates_image_size'] = $fd_image_size;
 } else {
   // Read from db or use defaults
   $similarity_limit = isset($conf['find_duplicates_similarity']) ? (int)$conf['find_duplicates_similarity'] : 100;
@@ -230,6 +234,9 @@ if (isset($_GET['similarity']) || isset($_GET['fd_mode'])) {
   $fd_time_interval = isset($_GET['fd_time_interval']) ? (int)$_GET['fd_time_interval'] : 15;
   $fd_search_group = isset($_GET['fd_search_group']) ? $_GET['fd_search_group'] : '';
   $fd_filter_album = isset($conf['find_duplicates_filter_album']) ? (int)$conf['find_duplicates_filter_album'] : 0;
+
+  $fd_image_size = isset($conf['find_duplicates_image_size']) ? (int)$conf['find_duplicates_image_size'] : 80;
+  if (!in_array($fd_image_size, array(50, 80, 100))) $fd_image_size = 80;
 }
 
 // User Settings for Pagination
@@ -689,6 +696,7 @@ $template->assign(array(
   'FD_SORT' => htmlspecialchars($sort_opt),
   'FD_CATEGORIES' => $categories,
   'FD_FILTER_ALBUM' => $fd_filter_album,
+  'FD_IMAGE_SIZE' => $fd_image_size,
   'FD_VERSION' => defined('FIND_DUPLICATES_VERSION') ? FIND_DUPLICATES_VERSION : '1.0.0',
 ));
 
