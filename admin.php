@@ -280,8 +280,8 @@ if ($hashed_images > 0 && $hashed_images >= $total_images)
   }
   
   // Cache key only depends on the heavy grouping parameters.
-  // We use v9 to fix the final metadata caching structure.
-  $cache_filename = $cache_dir . '/cache_v9_s' . $similarity_limit . '_a' . $same_album . '_h' . $hashed_images . '_m' . $fd_mode . '_t' . $fd_time_interval . '.json';
+  // We use v10 to fix the final metadata caching structure and base album selection.
+  $cache_filename = $cache_dir . '/cache_v10_s' . $similarity_limit . '_a' . $same_album . '_h' . $hashed_images . '_m' . $fd_mode . '_t' . $fd_time_interval . '.json';
   
   if (file_exists($cache_filename)) {
     // Load from cache
@@ -434,7 +434,8 @@ if ($hashed_images > 0 && $hashed_images >= $total_images)
     
     foreach ($groups as $group_ids) {
       $group_images = array();
-      $album_name = 'Nieznany album';
+      $album_counts_for_group = array();
+      $album_names_for_group = array();
       $lead_hash = '';
       $group_total_bytes = 0;
       $oldest_date = null;
@@ -455,9 +456,33 @@ if ($hashed_images > 0 && $hashed_images >= $total_images)
         $group_images[] = $img_data;
         if ($idx === 0) {
           $lead_hash = $images_data[$id]['PHASH'];
-          if (!empty($images_data[$id]['ALBUMS'])) {
-            $album_name = reset($images_data[$id]['ALBUMS']);
+        }
+
+        // Zliczanie albumów
+        if (!empty($img_data['ALBUMS'])) {
+          foreach ($img_data['ALBUMS'] as $album_id => $a_name) {
+            if (!isset($album_counts_for_group[$album_id])) {
+              $album_counts_for_group[$album_id] = 0;
+              $album_names_for_group[$album_id] = $a_name;
+            }
+            $album_counts_for_group[$album_id]++;
           }
+        }
+      }
+
+      $album_name = 'Nieznany album';
+      if (!empty($album_counts_for_group)) {
+        // Znajdź album z największą liczbą zdjęć (w razie remisu - pierwszy znaleziony z maksimum)
+        $max_count = -1;
+        $best_album_id = null;
+        foreach ($album_counts_for_group as $album_id => $count) {
+          if ($count > $max_count) {
+            $max_count = $count;
+            $best_album_id = $album_id;
+          }
+        }
+        if ($best_album_id !== null) {
+          $album_name = $album_names_for_group[$best_album_id];
         }
       }
       
@@ -664,6 +689,7 @@ $template->assign(array(
   'FD_SORT' => htmlspecialchars($sort_opt),
   'FD_CATEGORIES' => $categories,
   'FD_FILTER_ALBUM' => $fd_filter_album,
+  'FD_VERSION' => defined('FIND_DUPLICATES_VERSION') ? FIND_DUPLICATES_VERSION : '1.0.0',
 ));
 
 $template->set_filenames(array('plugin_admin_content' => FIND_DUPLICATES_PATH . 'admin.tpl'));
