@@ -104,6 +104,28 @@ function find_duplicates_on_delete($ids)
   pwg_query($query);
 }
 
+
+// Add link to the main left menu in admin panel (under Photos)
+add_event_handler('loc_begin_admin_page', 'find_duplicates_admin_main_menu');
+
+function find_duplicates_admin_main_menu()
+{
+  global $template, $page;
+
+  if (isset($page['page'])) {
+    $template->assign('U_FIND_DUPLICATES', FIND_DUPLICATES_ADMIN);
+    $template->set_prefilter('admin', 'find_duplicates_admin_menu_prefilter');
+  }
+}
+
+function find_duplicates_admin_menu_prefilter($content)
+{
+  $search = '<li><a href="{$U_BATCH}"><i class="icon-th"></i>{\'Batch Manager\'|@translate}</a></li>';
+  $replace = $search . "\n" . '				<li><a href="{$U_FIND_DUPLICATES}"><i class="icon-docs"></i>{\'Find Duplicates\'|@translate}</a></li>';
+
+  return str_replace($search, $replace, $content);
+}
+
 // Admin menu link
 add_event_handler('get_admin_plugin_menu_links', 'find_duplicates_admin_menu');
 function find_duplicates_admin_menu($menu)
