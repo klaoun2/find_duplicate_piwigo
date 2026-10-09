@@ -320,21 +320,6 @@ if ($hashed_images > 0 && $hashed_images >= $total_images)
     {
       $img_id = $row['id'];
       if (!isset($images_data[$img_id])) {
-        // Calculate filesize
-        $file_path_abs = PHPWG_ROOT_PATH . $row['path'];
-        $filesize_str = 'Brak danych';
-        $bytes = 0;
-        if (file_exists($file_path_abs)) {
-          $bytes = filesize($file_path_abs);
-          if ($bytes >= 1048576) {
-            $filesize_str = number_format($bytes / 1048576, 2) . ' MB';
-          } elseif ($bytes >= 1024) {
-            $filesize_str = number_format($bytes / 1024, 2) . ' KB';
-          } else {
-            $filesize_str = $bytes . ' B';
-          }
-        }
-
         // Check for Motion Picture based on Google Pixel convention (.MP in filename before extension or at the end of the base name)
         $has_motion = 0;
         if (stripos($row['file'], '.MP') !== false || stripos($row['name'], '.MP') !== false) {
@@ -351,8 +336,6 @@ if ($hashed_images > 0 && $hashed_images >= $total_images)
           'DATE_CREATION' => $row['date_creation'],
           'HAS_GPS' => (!empty($row['latitude']) && !empty($row['longitude'])) ? 1 : 0,
           'HAS_MOTION' => $has_motion,
-          'FILE_SIZE' => $filesize_str,
-          'FILE_SIZE_BYTES' => $bytes,
           'ALBUMS' => array()
         );
       }
@@ -451,7 +434,29 @@ if ($hashed_images > 0 && $hashed_images >= $total_images)
       
       foreach ($group_ids as $idx => $id) {
         $img_data = $images_data[$id];
-        $group_total_bytes += isset($img_data['FILE_SIZE_BYTES']) ? $img_data['FILE_SIZE_BYTES'] : 0;
+
+        // Calculate filesize lazily only for duplicate images
+        if (!isset($img_data['FILE_SIZE_BYTES'])) {
+          $file_path_abs = PHPWG_ROOT_PATH . $img_data['PATH'];
+          $filesize_str = 'Brak danych';
+          $bytes = 0;
+          if (file_exists($file_path_abs)) {
+            $bytes = filesize($file_path_abs);
+            if ($bytes >= 1048576) {
+              $filesize_str = number_format($bytes / 1048576, 2) . ' MB';
+            } elseif ($bytes >= 1024) {
+              $filesize_str = number_format($bytes / 1024, 2) . ' KB';
+            } else {
+              $filesize_str = $bytes . ' B';
+            }
+          }
+          $images_data[$id]['FILE_SIZE'] = $filesize_str;
+          $images_data[$id]['FILE_SIZE_BYTES'] = $bytes;
+          $img_data['FILE_SIZE'] = $filesize_str;
+          $img_data['FILE_SIZE_BYTES'] = $bytes;
+        }
+
+        $group_total_bytes += $img_data['FILE_SIZE_BYTES'];
 
         if (!empty($img_data['DATE_CREATION'])) {
           $ts = strtotime($img_data['DATE_CREATION']);
