@@ -29,6 +29,9 @@ if (isset($_GET['action']) && $_GET['action'] == 'scan')
   $result = pwg_query($query);
   $processed = 0;
   
+  $insert_values = array();
+  $batch_size = 500;
+
   while ($row = pwg_db_fetch_assoc($result))
   {
     $filepath = PHPWG_ROOT_PATH . $row['path'];
@@ -42,9 +45,18 @@ if (isset($_GET['action']) && $_GET['action'] == 'scan')
       }
     }
     
-    // Always insert a record so we don't process it again
-    pwg_query("REPLACE INTO " . FIND_DUPLICATES_TABLE . " (image_id, phash) VALUES (" . (int)$row['id'] . ", '" . $hash . "')");
+    $insert_values[] = "(" . (int)$row['id'] . ", '" . $hash . "')";
     $processed++;
+
+    if (count($insert_values) >= $batch_size) {
+      pwg_query("REPLACE INTO " . FIND_DUPLICATES_TABLE . " (image_id, phash) VALUES " . implode(", ", $insert_values));
+      $insert_values = array();
+    }
+  }
+
+  // Batch insert remaining records
+  if (!empty($insert_values)) {
+    pwg_query("REPLACE INTO " . FIND_DUPLICATES_TABLE . " (image_id, phash) VALUES " . implode(", ", $insert_values));
   }
   
   // Get counts to return progress
