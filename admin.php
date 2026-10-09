@@ -574,7 +574,7 @@ foreach ($duplicates as $group) {
 
     // Check if this image belongs to any of the allowed albums
     if (!empty($allowed_album_ids)) {
-      foreach (array_keys($img['ALBUMS']) as $album_id) {
+      foreach ($img['ALBUMS'] as $album_id => $_album_name) {
         if (isset($allowed_album_ids[$album_id])) {
           $has_allowed_album = true;
           break;
