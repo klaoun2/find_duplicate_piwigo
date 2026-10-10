@@ -67,8 +67,11 @@
   opacity: 0;
   transition: opacity 0.3s ease;
   border-radius: 4px;
+  z-index: 10;
+  pointer-events: none;
 }
-.fd-modal-img-wrap a:hover .fd-modal-img-actions-overlay { opacity: 1; }
+.fd-modal-img-wrap:hover .fd-modal-img-actions-overlay,
+.fd-modal-img-wrap a:hover .fd-modal-img-actions-overlay { opacity: 1; pointer-events: auto; }
 
 .fd-badge { display: inline-block; padding: 4px 8px; border-radius: 12px; background: rgba(128,128,128,0.15); margin: 2px; font-size: 11px; border: 1px solid rgba(128,128,128,0.2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 95%; }
 .fd-badge.badge-gps { color:#5cb85c; border-color: rgba(92, 184, 92, 0.4); background: rgba(92, 184, 92, 0.1); }
