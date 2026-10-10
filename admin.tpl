@@ -391,7 +391,7 @@ function scanChunk() {
           <div style="display: flex; gap: 15px; flex-wrap: wrap; pointer-events: none; opacity: 0.8; clear: both; padding-top: 10px;">
             {foreach from=$group.IMAGES item=img}
               <div class="fd-img-wrap" data-id="{$img.ID}">
-                <img src="{$img.PATH}" alt="{$img.NAME}">
+                <img src="{$img.THUMB_URL}" data-full-src="{$img.FULL_URL}" class="fd-lazy-image" alt="{$img.NAME}">
                 <div style="position: absolute; bottom: 5px; right: 5px; display: flex; gap: 3px;">
                   {if $img.ALBUM_COUNT|default:0 > 1}
                     <span style="background: rgba(0,0,0,0.6); color: white; padding: 2px 5px; border-radius: 4px; font-size: 10px;" title="Należy do wielu albumów">📁 {$img.ALBUM_COUNT}</span>
@@ -559,7 +559,9 @@ function scanChunk() {
       link.target = '_blank';
 
       var image = document.createElement('img');
-      image.src = img.PATH;
+      image.src = img.THUMB_URL;
+      image.setAttribute('data-full-src', img.FULL_URL);
+      image.className = 'fd-modal-lazy-image';
       image.alt = img.NAME;
 
       link.appendChild(image);
@@ -645,9 +647,36 @@ function scanChunk() {
     requestAnimationFrame(function() {
       requestAnimationFrame(function() {
         modal.classList.add('fd-modal-show');
+        // Trigger lazy loading for modal images
+        var modalImages = container.querySelectorAll('.fd-modal-lazy-image');
+        modalImages.forEach(function(imgEl) {
+           var fullSrc = imgEl.getAttribute('data-full-src');
+           if (fullSrc && imgEl.src !== fullSrc) {
+               var loader = new Image();
+               loader.onload = function() {
+                   imgEl.src = fullSrc;
+               };
+               loader.src = fullSrc;
+           }
+        });
       });
     });
   }
+
+  // Initial lazy loading for main list images
+  window.addEventListener('DOMContentLoaded', function() {
+      var lazyImages = document.querySelectorAll('.fd-lazy-image');
+      lazyImages.forEach(function(imgEl) {
+         var fullSrc = imgEl.getAttribute('data-full-src');
+         if (fullSrc) {
+             var loader = new Image();
+             loader.onload = function() {
+                 imgEl.src = fullSrc;
+             };
+             loader.src = fullSrc;
+         }
+      });
+  });
 
   function toggleFavorite(imageId, btnEl, imgObj, groupEl) {
     var originalText = btnEl.innerHTML;

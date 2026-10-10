@@ -301,8 +301,8 @@ if ($hashed_images > 0 && $hashed_images >= $total_images)
   }
   
   // Cache key only depends on the heavy grouping parameters.
-  // We use v10 to fix the final metadata caching structure and base album selection.
-  $cache_filename = $cache_dir . '/cache_v10_s' . $similarity_limit . '_a' . $same_album . '_h' . $hashed_images . '_m' . $fd_mode . '_t' . $fd_time_interval . '.json';
+  // We use v11 to introduce FULL_URL and THUMB_URL to fix file:/// path security errors in the browser.
+  $cache_filename = $cache_dir . '/cache_v11_s' . $similarity_limit . '_a' . $same_album . '_h' . $hashed_images . '_m' . $fd_mode . '_t' . $fd_time_interval . '.json';
   
   if (file_exists($cache_filename)) {
     // Load from cache
@@ -317,7 +317,7 @@ if ($hashed_images > 0 && $hashed_images >= $total_images)
     $max_diff = round((100 - $similarity_limit) / 100 * 64);
     
     $query = '
-      SELECT i.id, i.path, i.name, i.file, i.date_creation, i.latitude, i.longitude, h.phash, ic.category_id, c.name as cat_name
+      SELECT i.id, i.path, i.name, i.file, i.date_creation, i.latitude, i.longitude, i.rotation, i.width, i.height, h.phash, ic.category_id, c.name as cat_name
       FROM ' . FIND_DUPLICATES_TABLE . ' h
       INNER JOIN ' . IMAGES_TABLE . ' i ON h.image_id = i.id
       LEFT JOIN ' . IMAGE_CATEGORY_TABLE . ' ic ON i.id = ic.image_id
@@ -338,9 +338,22 @@ if ($hashed_images > 0 && $hashed_images >= $total_images)
             $has_motion = 1;
         }
 
+        // Generate proper web URLs to prevent "file:///" errors in browsers
+        $full_url = get_root_url() . $row['path'];
+        $thumb_url = $full_url; // Fallback
+
+        // Attempt to get a generated thumbnail URL using Piwigo Core API
+        if (class_exists('SrcImage') && class_exists('DerivativeImage')) {
+            $src_image = new SrcImage($row);
+            $thumb = new DerivativeImage(IMG_THUMB, $src_image);
+            $thumb_url = $thumb->get_url();
+        }
+
         $images_data[$img_id] = array(
           'ID' => $row['id'],
           'PATH' => $row['path'],
+          'FULL_URL' => $full_url,
+          'THUMB_URL' => $thumb_url,
           'FILE' => $row['file'],
           'NAME' => $row['name'] ? $row['name'] : $row['file'],
           'URL' => get_root_url() . 'admin.php?page=photo-' . $row['id'],
