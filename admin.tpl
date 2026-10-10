@@ -52,33 +52,35 @@
 #fd-modal-close { position: absolute; right: 20px; top: 15px; font-size: 28px; font-weight: bold; cursor: pointer; opacity: 0.7; }
 #fd-modal-close:hover { opacity: 1; }
 .fd-modal-images { display: flex; flex-wrap: wrap; gap: 20px; margin-top: 20px; justify-content: center; }
-.fd-modal-img-wrap { text-align: center; background: rgba(128,128,128,.1); padding: 15px; border-radius: 8px; border: 1px solid rgba(128,128,128,.3); max-width: 45%; flex-grow: 1; transition: opacity 0.3s ease, transform 0.3s ease, max-width 0.3s ease, padding 0.3s ease, margin 0.3s ease, border-width 0.3s ease, flex-grow 0.3s ease; transform-origin: top center; overflow: hidden; position: relative; }
+.fd-modal-img-wrap { text-align: center; background: rgba(128,128,128,.1); padding: 15px; border-radius: 8px; border: 1px solid rgba(128,128,128,.3); max-width: 45%; flex-grow: 1; transition: opacity 0.3s ease, transform 0.3s ease, max-width 0.3s ease, padding 0.3s ease, margin 0.3s ease, border-width 0.3s ease, flex-grow 0.3s ease; transform-origin: top center; overflow: hidden; }
 .fd-modal-img-wrap.fd-collapsing { opacity: 0; transform: scale(0.8); max-width: 0; padding-left: 0; padding-right: 0; margin-left: 0; margin-right: 0; border-width: 0; flex-grow: 0.0001; }
+.fd-modal-img-wrap a { display: block; position: relative; overflow: hidden; }
 .fd-modal-img-wrap img { max-width: 100%; max-height: {$FD_IMAGE_SIZE}vh; object-fit: contain; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.3); vertical-align: top; }
 
 .fd-modal-img-actions-overlay {
   position: absolute;
-  top: 0; left: 0; width: 100%; height: 100%;
-  background: rgba(0,0,0,0.4);
+  bottom: 0; left: 0; width: 100%; height: 80px;
+  background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 15px;
+  gap: 20px;
   opacity: 0;
-  transition: opacity 0.3s ease;
-  border-radius: 4px;
+  transform: translateY(20px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  border-bottom-left-radius: 4px;
+  border-bottom-right-radius: 4px;
   z-index: 10;
   pointer-events: none;
 }
-.fd-modal-img-wrap:hover .fd-modal-img-actions-overlay,
-.fd-modal-img-wrap a:hover .fd-modal-img-actions-overlay { opacity: 1; pointer-events: auto; }
+.fd-modal-img-wrap a:hover .fd-modal-img-actions-overlay { opacity: 1; transform: translateY(0); pointer-events: auto; }
 
 .fd-badge { display: inline-block; padding: 4px 8px; border-radius: 12px; background: rgba(128,128,128,0.15); margin: 2px; font-size: 11px; border: 1px solid rgba(128,128,128,0.2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 95%; }
 .fd-badge.badge-gps { color:#5cb85c; border-color: rgba(92, 184, 92, 0.4); background: rgba(92, 184, 92, 0.1); }
 .fd-badge.badge-motion { color:#d9edf7; border-color: rgba(217, 237, 247, 0.4); background: rgba(217, 237, 247, 0.1); }
 .fd-modal-img-info { margin: 2px 0; font-size: 14px; word-break: break-all; }
-.fd-btn-danger { background: rgba(220, 53, 69, 0.2); border: 1px solid rgba(220, 53, 69, 0.5); color: inherit; border-radius: 50%; cursor: pointer; font-weight: bold; font-size: 20px; transition: all 0.2s ease; width: 40px; height: 40px; display: inline-flex; align-items: center; justify-content: center; padding: 0; }
-.fd-btn-danger:hover { background: rgba(220, 53, 69, 0.5); box-shadow: 0 4px 10px rgba(220, 53, 69, 0.3); transform: scale(1.05); }
+.fd-btn-danger { background: rgba(220, 53, 69, 0.2); border: 1px solid rgba(220, 53, 69, 0.5); color: inherit; border-radius: 50%; cursor: pointer; font-weight: bold; font-size: 24px; transition: all 0.2s ease; width: 50px; height: 50px; display: inline-flex; align-items: center; justify-content: center; padding: 0; }
+.fd-btn-danger:hover { background: rgba(220, 53, 69, 0.5); box-shadow: 0 4px 12px rgba(220, 53, 69, 0.4); transform: scale(1.05); }
 .fd-btn-danger:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
 
 #fd-main .fd-pagination { display: flex; justify-content: center; gap: 10px; padding: 20px 0; align-items: center; }
@@ -106,16 +108,16 @@
   cursor: pointer;
   padding: 0;
   border-radius: 50%;
-  font-size: 24px;
+  font-size: 28px;
   transition: all 0.2s ease;
-  width: 40px;
-  height: 40px;
+  width: 50px;
+  height: 50px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
 }
 .fd-favorite-btn.active { background: rgba(255,193,7,0.3); font-weight: bold; text-shadow: 0 0 5px rgba(255,193,7,0.5); }
-.fd-favorite-btn:hover { background: rgba(255,193,7,0.4); box-shadow: 0 4px 10px rgba(255,193,7,0.3); transform: scale(1.05); }
+.fd-favorite-btn:hover { background: rgba(255,193,7,0.4); box-shadow: 0 4px 12px rgba(255,193,7,0.4); transform: scale(1.05); }
 
 .fd-favorite-all-btn {
   background: rgba(255,193,7,0.1);
@@ -626,9 +628,6 @@ function scanChunk() {
       delBtn.className = 'fd-btn-danger';
       delBtn.innerHTML = '🗑️';
       delBtn.title = 'Usuń zdjęcie';
-      delBtn.style.fontSize = '20px';
-      delBtn.style.padding = '0';
-      delBtn.style.lineHeight = '40px';
       delBtn.style.margin = '0';
       // Prevent link click when clicking button
       delBtn.onclick = function(e) {
