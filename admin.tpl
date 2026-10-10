@@ -79,8 +79,8 @@
 .fd-badge.badge-gps { color:#5cb85c; border-color: rgba(92, 184, 92, 0.4); background: rgba(92, 184, 92, 0.1); }
 .fd-badge.badge-motion { color:#d9edf7; border-color: rgba(217, 237, 247, 0.4); background: rgba(217, 237, 247, 0.1); }
 .fd-modal-img-info { margin: 2px 0; font-size: 14px; word-break: break-all; }
-.fd-btn-danger { background: rgba(220, 53, 69, 0.2); border: 1px solid rgba(220, 53, 69, 0.5); color: inherit; border-radius: 50%; cursor: pointer; font-weight: bold; font-size: 24px; transition: all 0.2s ease; width: 50px; height: 50px; display: inline-flex; align-items: center; justify-content: center; padding: 0; }
-.fd-btn-danger:hover { background: rgba(220, 53, 69, 0.5); box-shadow: 0 4px 12px rgba(220, 53, 69, 0.4); transform: scale(1.05); }
+.fd-btn-danger { background: rgba(220, 53, 69, 0.2); border: 1px solid rgba(220, 53, 69, 0.5); color: inherit; border-radius: 12px; cursor: pointer; font-weight: bold; font-size: 24px; transition: all 0.2s ease; width: 50px; height: 50px; display: inline-flex; align-items: center; justify-content: center; padding: 0; line-height: 1; }
+.fd-btn-danger:hover { background: rgba(220, 53, 69, 0.5); box-shadow: 0 4px 12px rgba(220, 53, 69, 0.4); transform: translateY(-2px); }
 .fd-btn-danger:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
 
 #fd-main .fd-pagination { display: flex; justify-content: center; gap: 10px; padding: 20px 0; align-items: center; }
@@ -107,7 +107,7 @@
   color: #ffc107;
   cursor: pointer;
   padding: 0;
-  border-radius: 50%;
+  border-radius: 12px;
   font-size: 28px;
   transition: all 0.2s ease;
   width: 50px;
@@ -115,9 +115,11 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  line-height: 1;
+  padding-bottom: 3px;
 }
 .fd-favorite-btn.active { background: rgba(255,193,7,0.3); font-weight: bold; text-shadow: 0 0 5px rgba(255,193,7,0.5); }
-.fd-favorite-btn:hover { background: rgba(255,193,7,0.4); box-shadow: 0 4px 12px rgba(255,193,7,0.4); transform: scale(1.05); }
+.fd-favorite-btn:hover { background: rgba(255,193,7,0.4); box-shadow: 0 4px 12px rgba(255,193,7,0.4); transform: translateY(-2px); }
 
 .fd-favorite-all-btn {
   background: rgba(255,193,7,0.1);
@@ -548,6 +550,22 @@ function scanChunk() {
   window.addEventListener('click', function(e) {
     if (e.target == modal) {
       closeModal();
+    }
+  });
+
+  document.addEventListener('keydown', function(e) {
+    if (modal.classList.contains('fd-modal-show')) {
+      if (e.key === 'Escape') {
+        closeModal();
+      } else if (e.key === 'Delete') {
+        var hoveredWrap = document.querySelector('.fd-modal-img-wrap:hover');
+        if (hoveredWrap) {
+          var delBtn = hoveredWrap.querySelector('.fd-btn-danger');
+          if (delBtn && !delBtn.disabled) {
+            delBtn.click();
+          }
+        }
+      }
     }
   });
 
