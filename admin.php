@@ -340,20 +340,11 @@ if ($hashed_images > 0 && $hashed_images >= $total_images)
 
         // Generate proper web URLs to prevent "file:///" errors in browsers
         $full_url = get_root_url() . $row['path'];
-        $thumb_url = $full_url; // Fallback
-
-        // Attempt to get a generated thumbnail URL using Piwigo Core API
-        if (class_exists('SrcImage') && class_exists('DerivativeImage')) {
-            $src_image = new SrcImage($row);
-            $thumb = new DerivativeImage(IMG_THUMB, $src_image);
-            $thumb_url = $thumb->get_url();
-        }
 
         $images_data[$img_id] = array(
           'ID' => $row['id'],
           'PATH' => $row['path'],
           'FULL_URL' => $full_url,
-          'THUMB_URL' => $thumb_url,
           'FILE' => $row['file'],
           'NAME' => $row['name'] ? $row['name'] : $row['file'],
           'URL' => get_root_url() . 'admin.php?page=photo-' . $row['id'],
