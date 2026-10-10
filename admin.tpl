@@ -45,20 +45,38 @@
 /* Modal CSS */
 #fd-modal { display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.8); backdrop-filter: blur(5px); overflow: auto; opacity: 0; transition: opacity 0.3s ease; }
 #fd-modal.fd-modal-show { opacity: 1; }
-#fd-modal-content { background: var(--theme-bg, #222); color: var(--theme-color, #eee); margin: 2% auto; padding: 20px; border-radius: 10px; width: 90%; max-width: 1200px; position: relative; border: 1px solid rgba(128,128,128,.3); box-shadow: 0 5px 15px rgba(0,0,0,0.5); opacity: 0; transform: translateY(-40px); transition: opacity 0.3s ease, transform 0.3s ease; }
+#fd-modal-content { background: var(--theme-bg, #222); color: var(--theme-color, #eee); margin: 2% auto; padding: 30px; border-radius: 12px; width: 90%; max-width: 1200px; position: relative; border: 1px solid rgba(128,128,128,.4); box-shadow: 0 10px 40px rgba(0,0,0,0.7); opacity: 0; transform: translateY(-40px); transition: opacity 0.3s ease, transform 0.3s ease; }
 #fd-modal.fd-modal-show #fd-modal-content { opacity: 1; transform: translateY(0); }
 #fd-modal.fd-modal-closing { opacity: 0; }
 #fd-modal.fd-modal-closing #fd-modal-content { opacity: 0; transform: translateY(-40px); }
 #fd-modal-close { position: absolute; right: 20px; top: 15px; font-size: 28px; font-weight: bold; cursor: pointer; opacity: 0.7; }
 #fd-modal-close:hover { opacity: 1; }
 .fd-modal-images { display: flex; flex-wrap: wrap; gap: 20px; margin-top: 20px; justify-content: center; }
-.fd-modal-img-wrap { text-align: center; background: rgba(128,128,128,.1); padding: 15px; border-radius: 8px; border: 1px solid rgba(128,128,128,.3); max-width: 45%; flex-grow: 1; transition: opacity 0.3s ease, transform 0.3s ease, max-width 0.3s ease, padding 0.3s ease, margin 0.3s ease, border-width 0.3s ease, flex-grow 0.3s ease; transform-origin: top center; overflow: hidden; }
+.fd-modal-img-wrap { text-align: center; background: rgba(128,128,128,.1); padding: 15px; border-radius: 8px; border: 1px solid rgba(128,128,128,.3); max-width: 45%; flex-grow: 1; transition: opacity 0.3s ease, transform 0.3s ease, max-width 0.3s ease, padding 0.3s ease, margin 0.3s ease, border-width 0.3s ease, flex-grow 0.3s ease; transform-origin: top center; overflow: hidden; position: relative; }
 .fd-modal-img-wrap.fd-collapsing { opacity: 0; transform: scale(0.8); max-width: 0; padding-left: 0; padding-right: 0; margin-left: 0; margin-right: 0; border-width: 0; flex-grow: 0.0001; }
-.fd-modal-img-wrap img { max-width: 100%; max-height: {$FD_IMAGE_SIZE}vh; object-fit: contain; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+.fd-modal-img-wrap img { max-width: 100%; max-height: {$FD_IMAGE_SIZE}vh; object-fit: contain; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.3); vertical-align: top; }
+
+.fd-modal-img-actions-overlay {
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0,0,0,0.4);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 15px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  border-radius: 4px;
+}
+.fd-modal-img-wrap a:hover .fd-modal-img-actions-overlay { opacity: 1; }
+
+.fd-badge { display: inline-block; padding: 4px 8px; border-radius: 12px; background: rgba(128,128,128,0.15); margin: 2px; font-size: 11px; border: 1px solid rgba(128,128,128,0.2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 95%; }
+.fd-badge.badge-gps { color:#5cb85c; border-color: rgba(92, 184, 92, 0.4); background: rgba(92, 184, 92, 0.1); }
+.fd-badge.badge-motion { color:#d9edf7; border-color: rgba(217, 237, 247, 0.4); background: rgba(217, 237, 247, 0.1); }
 .fd-modal-img-info { margin: 2px 0; font-size: 14px; word-break: break-all; }
-.fd-btn-danger { background: rgba(220, 53, 69, 0.2); border: 1px solid rgba(220, 53, 69, 0.5); color: inherit; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px; transition: 0.2s; }
-.fd-btn-danger:hover { background: rgba(220, 53, 69, 0.5); }
-.fd-btn-danger:disabled { opacity: 0.5; cursor: not-allowed; }
+.fd-btn-danger { background: rgba(220, 53, 69, 0.2); border: 1px solid rgba(220, 53, 69, 0.5); color: inherit; border-radius: 50%; cursor: pointer; font-weight: bold; font-size: 20px; transition: all 0.2s ease; width: 40px; height: 40px; display: inline-flex; align-items: center; justify-content: center; padding: 0; }
+.fd-btn-danger:hover { background: rgba(220, 53, 69, 0.5); box-shadow: 0 4px 10px rgba(220, 53, 69, 0.3); transform: scale(1.05); }
+.fd-btn-danger:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
 
 #fd-main .fd-pagination { display: flex; justify-content: center; gap: 10px; padding: 20px 0; align-items: center; }
 #fd-main .fd-pagination a, #fd-main .fd-pagination span {
@@ -83,29 +101,34 @@
   border: 1px solid rgba(255,193,7,0.5);
   color: #ffc107;
   cursor: pointer;
-  padding: 8px 12px;
-  border-radius: 6px;
-  font-size: 18px;
-  margin-top: 5px;
-  transition: 0.2s;
-  line-height: 1;
+  padding: 0;
+  border-radius: 50%;
+  font-size: 24px;
+  transition: all 0.2s ease;
+  width: 40px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 .fd-favorite-btn.active { background: rgba(255,193,7,0.3); font-weight: bold; text-shadow: 0 0 5px rgba(255,193,7,0.5); }
-.fd-favorite-btn:hover { background: rgba(255,193,7,0.4); }
+.fd-favorite-btn:hover { background: rgba(255,193,7,0.4); box-shadow: 0 4px 10px rgba(255,193,7,0.3); transform: scale(1.05); }
 
 .fd-favorite-all-btn {
   background: rgba(255,193,7,0.1);
   border: 1px solid rgba(255,193,7,0.5);
   color: #ffc107;
   cursor: pointer;
-  padding: 6px 12px;
-  border-radius: 6px;
-  font-size: 13px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 14px;
   font-weight: bold;
-  transition: 0.2s;
+  transition: all 0.2s ease;
   vertical-align: middle;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
-.fd-favorite-all-btn:hover { background: rgba(255,193,7,0.2); }
+.fd-favorite-all-btn:hover { background: rgba(255,193,7,0.2); box-shadow: 0 4px 10px rgba(255,193,7,0.2); transform: translateY(-1px); }
 
 .fd-search-bar { display: flex; gap: 10px; margin-bottom: 20px; align-items: center; }
 .fd-search-bar input { padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(128,128,128,.4); background: rgba(128,128,128,.1); color: inherit; flex-grow: 1; max-width: 300px; }
@@ -580,16 +603,8 @@ function scanChunk() {
       };
       image.alt = img.NAME;
 
-      link.appendChild(loader);
-      link.appendChild(image);
-      wrap.appendChild(link);
-
-      var actionRow = document.createElement('div');
-      actionRow.style.display = 'flex';
-      actionRow.style.justifyContent = 'center';
-      actionRow.style.gap = '15px';
-      actionRow.style.margin = '15px 0';
-      actionRow.style.alignItems = 'center';
+      var overlay = document.createElement('div');
+      overlay.className = 'fd-modal-img-actions-overlay';
 
       var favBtn = document.createElement('button');
       var isFav = img.IS_FAVORITE == 1;
@@ -597,61 +612,76 @@ function scanChunk() {
       favBtn.innerHTML = isFav ? '★' : '☆';
       favBtn.title = 'Zaznacz/odznacz jako ulubione';
       favBtn.style.margin = '0';
-      favBtn.onclick = function() {
+      // Prevent link click when clicking button
+      favBtn.onclick = function(e) {
+          e.preventDefault();
+          e.stopPropagation();
           toggleFavorite(img.ID, favBtn, img, groupEl);
       };
 
-            var delBtn = document.createElement('button');
+      var delBtn = document.createElement('button');
       delBtn.className = 'fd-btn-danger';
       delBtn.innerHTML = '🗑️';
       delBtn.title = 'Usuń zdjęcie';
-      delBtn.style.fontSize = '18px';
-      delBtn.style.padding = '8px 12px';
-      delBtn.style.lineHeight = '1';
+      delBtn.style.fontSize = '20px';
+      delBtn.style.padding = '0';
+      delBtn.style.lineHeight = '40px';
       delBtn.style.margin = '0';
-      delBtn.onclick = function() {
+      // Prevent link click when clicking button
+      delBtn.onclick = function(e) {
+        e.preventDefault();
+        e.stopPropagation();
         if(confirm('Czy na pewno chcesz bezpowrotnie usunąć to zdjęcie (ID: ' + img.ID + ')?')) {
           deleteImage(img.ID, phash, wrap, groupEl);
         }
       };
 
-      actionRow.appendChild(favBtn);
-      actionRow.appendChild(delBtn);
+      overlay.appendChild(favBtn);
+      overlay.appendChild(delBtn);
+
+      link.appendChild(loader);
+      link.appendChild(image);
+      link.appendChild(overlay);
+      wrap.appendChild(link);
 
       var info = document.createElement('div');
       info.className = 'fd-modal-img-info';
-      info.style.fontSize = '12px'; // Zmniejszony rozmiar fontu
-      info.style.textAlign = 'left';
-      info.style.background = 'rgba(128,128,128,0.05)';
-      info.style.padding = '4px';
-      info.style.borderRadius = '6px';
-      info.style.display = 'inline-block';
+      info.style.textAlign = 'center';
+      info.style.marginTop = '10px';
+      info.style.display = 'flex';
+      info.style.flexWrap = 'wrap';
+      info.style.justifyContent = 'center';
+      info.style.gap = '5px';
+
+      var badgesHtml = '';
 
       var creationDate = img.DATE_CREATION ? img.DATE_CREATION : 'Nieznana';
-      var fileSize = img.FILE_SIZE ? img.FILE_SIZE : 'Brak danych';
+      badgesHtml += '<span class="fd-badge" title="Data utworzenia">📅 ' + creationDate + '</span>';
 
-      var albumsHtml = '';
-      if (img.ALBUMS) {
-         var albumCount = Object.keys(img.ALBUMS).length;
-         albumsHtml = '<strong>Albumy (' + albumCount + '):</strong> <ul style="margin: 0; padding-left: 15px;">';
-         for (var cat_id in img.ALBUMS) {
-            albumsHtml += '<li>' + img.ALBUMS[cat_id] + '</li>';
-         }
-         albumsHtml += '</ul>';
+      var fileSize = img.FILE_SIZE ? img.FILE_SIZE : 'Brak danych';
+      badgesHtml += '<span class="fd-badge" title="Rozmiar pliku">💾 ' + fileSize + '</span>';
+
+      if (img.HAS_GPS == 1) {
+          badgesHtml += '<span class="fd-badge badge-gps" title="Posiada lokalizację GPS">📍 GPS</span>';
+      }
+      if (img.HAS_MOTION == 1) {
+          badgesHtml += '<span class="fd-badge badge-motion" title="Zarejestrowano jako Motion Picture">🎬 Motion</span>';
       }
 
-            var gpsHtml = (img.HAS_GPS == 1) ? '<span style="color:#5cb85c; font-weight:bold; margin-right: 10px;">📍 Posiada GPS</span>' : '';
-      var motionHtml = (img.HAS_MOTION == 1) ? '<span style="color:#d9edf7; font-weight:bold;">🎬 Motion Picture</span>' : '';
+      if (img.ALBUMS) {
+         var albumCount = Object.keys(img.ALBUMS).length;
+         var albumNames = [];
+         for (var cat_id in img.ALBUMS) {
+            albumNames.push(img.ALBUMS[cat_id]);
+         }
+         badgesHtml += '<span class="fd-badge" title="Albumy: ' + albumNames.join(', ').replace(/"/g, '&quot;') + '">📁 ' + albumCount + ' Album(y)</span>';
+      }
 
-      var motionAndGps = (gpsHtml || motionHtml) ? (gpsHtml + motionHtml + '<br>') : '';
+      badgesHtml += '<span class="fd-badge" title="ID zdjęcia">#️⃣ ' + img.ID + '</span>';
+      badgesHtml += '<span class="fd-badge" title="Nazwa pliku">📄 ' + img.FILE + '</span>';
 
-      info.innerHTML = '<strong>Data:</strong> ' + creationDate + '<br>' +
-                       motionAndGps +
-                       albumsHtml +
-                       '<strong>Rozmiar:</strong> ' + fileSize + '<br>' +
-                       '<strong>ID:</strong> ' + img.ID + ' | <strong>Plik:</strong> ' + img.FILE;
+      info.innerHTML = badgesHtml;
 
-      wrap.appendChild(actionRow);
       wrap.appendChild(info);
       container.appendChild(wrap);
     });
