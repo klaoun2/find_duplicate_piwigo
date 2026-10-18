@@ -272,6 +272,7 @@ while ($row = pwg_db_fetch_assoc($result)) {
     'id' => $row['id'],
     'name' => $row['name'],
     'uppercats' => $row['uppercats'],
+    'uppercats_arr' => explode(',', $row['uppercats']),
     'display_name' => $indent . htmlspecialchars($row['name'])
   );
 }
@@ -563,8 +564,7 @@ if ($fd_filter_album > 0) {
   $filter_album_str = (string)$fd_filter_album;
   foreach ($categories as $cat) {
     // If uppercats contains the selected album ID, it's a sub-album
-    $uppercats_arr = explode(',', $cat['uppercats']);
-    if (in_array($filter_album_str, $uppercats_arr)) {
+    if (in_array($filter_album_str, $cat['uppercats_arr'])) {
       $allowed_album_ids[$cat['id']] = true;
     }
   }
