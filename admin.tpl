@@ -55,7 +55,8 @@
 .fd-modal-img-wrap { text-align: center; background: rgba(128,128,128,.1); padding: 15px; border-radius: 8px; border: 1px solid rgba(128,128,128,.3); max-width: 45%; flex-grow: 1; transition: opacity 0.3s ease, transform 0.3s ease, max-width 0.3s ease, padding 0.3s ease, margin 0.3s ease, border-width 0.3s ease, flex-grow 0.3s ease; transform-origin: top center; overflow: hidden; }
 .fd-modal-img-wrap.fd-collapsing { opacity: 0; transform: scale(0.8); max-width: 0; padding-left: 0; padding-right: 0; margin-left: 0; margin-right: 0; border-width: 0; flex-grow: 0.0001; }
 .fd-modal-img-wrap a { display: inline-block; position: relative; overflow: hidden; line-height: 0; }
-.fd-modal-img-wrap img { max-width: 100%; max-height: {$FD_IMAGE_SIZE}vh; object-fit: contain; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.3); vertical-align: top; cursor: crosshair; }
+.fd-modal-img-wrap img { max-width: 100%; max-height: {$FD_IMAGE_SIZE}vh; object-fit: contain; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.3); vertical-align: top; }
+.fd-modal-img-wrap img.fd-zoom-active-cursor { cursor: crosshair; }
 
 .fd-zoom-lens {
   position: absolute;
@@ -678,10 +679,12 @@ function scanChunk() {
         syncZoomBtn.classList.add('active');
         // Disable individual active zooms to avoid confusion
         document.querySelectorAll('.fd-zoom-toggle-btn.active').forEach(function(b) { b.classList.remove('active'); });
+        document.querySelectorAll('#fd-modal-images img').forEach(function(img) { img.classList.add('fd-zoom-active-cursor'); });
       } else {
         syncZoomBtn.classList.remove('active');
         // Hide all lenses immediately when turned off
         document.querySelectorAll('#fd-modal-images .fd-zoom-lens').forEach(function(l) { l.style.opacity = '0'; });
+        document.querySelectorAll('#fd-modal-images img').forEach(function(img) { img.classList.remove('fd-zoom-active-cursor'); });
       }
     };
     titleEl.appendChild(syncZoomBtn);
@@ -728,9 +731,11 @@ function scanChunk() {
           var isActive = zoomToggle.classList.contains('active');
           if (isActive) {
               zoomToggle.classList.remove('active');
+              image.classList.remove('fd-zoom-active-cursor');
               lens.style.opacity = '0';
           } else {
               zoomToggle.classList.add('active');
+              image.classList.add('fd-zoom-active-cursor');
               // Turn off global sync zoom to avoid conflict
               if (isSyncZoomActive) {
                   var syncBtn = document.querySelector('.fd-sync-zoom-btn');
@@ -840,8 +845,32 @@ function scanChunk() {
       });
 
       link.addEventListener('mousemove', function(e) {
-        // Hide lens when hovering over bottom action bar or the zoom button itself
-        if (e.target.closest('.fd-modal-img-actions-overlay') || e.target.closest('.fd-zoom-toggle-btn')) {
+        var rect = image.getBoundingClientRect();
+
+        var x = e.clientX - rect.left;
+        var y = e.clientY - rect.top;
+
+        // Hide lens when hovering near bottom action bar or the zoom button itself (Safety buffer)
+        var bottomActionHeight = 80; // Approximate height of .fd-modal-img-actions-overlay
+        var safetyMarginBottom = 40; // Pixels above the action bar to start hiding
+        var safetyMarginTopRight = 30; // Pixels around the zoom button
+
+        var hideLens = false;
+
+        // 1. Bottom area check (Overlay + Buffer)
+        if (y > (rect.height - bottomActionHeight - safetyMarginBottom)) {
+            hideLens = true;
+        }
+
+        // 2. Top right area check (Zoom Toggle button + Buffer)
+        // Zoom button is approx 36x36 at top:10px right:10px.
+        // We define a block from x > (width - 10 - 36 - buffer) and y < (10 + 36 + buffer)
+        if (x > (rect.width - 46 - safetyMarginTopRight) && y < (46 + safetyMarginTopRight)) {
+            hideLens = true;
+        }
+
+        // Also fallback to direct target check just in case
+        if (hideLens || e.target.closest('.fd-modal-img-actions-overlay') || e.target.closest('.fd-zoom-toggle-btn')) {
             if (isSyncZoomActive) {
                 document.querySelectorAll('#fd-modal-images .fd-zoom-lens').forEach(function(l) { l.style.opacity = '0'; });
             } else {
@@ -850,7 +879,7 @@ function scanChunk() {
             return;
         }
 
-        // Show lens if we moved off the action bar but zoom is active
+        // Show lens if we moved off the action zones but zoom is active
         if (isSyncZoomActive) {
             document.querySelectorAll('#fd-modal-images .fd-zoom-lens').forEach(function(l) { l.style.opacity = '1'; });
         } else if (zoomToggle.classList.contains('active')) {
@@ -858,11 +887,6 @@ function scanChunk() {
         }
 
         if (!isSyncZoomActive && !zoomToggle.classList.contains('active')) return;
-
-        var rect = image.getBoundingClientRect();
-
-        var x = e.clientX - rect.left;
-        var y = e.clientY - rect.top;
 
         x = Math.max(0, Math.min(x, rect.width));
         y = Math.max(0, Math.min(y, rect.height));
@@ -873,7 +897,7 @@ function scanChunk() {
         if (isSyncZoomActive) {
             var allWrappers = document.querySelectorAll('#fd-modal-images .fd-modal-img-wrap a');
             allWrappers.forEach(function(wrapper) {
-                var currImage = wrapper.querySelector('img.fd-lazy-img-element');
+                var currImage = wrapper.querySelector('img');
                 var currLens = wrapper.querySelector('.fd-zoom-lens');
 
                 if (currImage && currLens) {
