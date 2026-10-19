@@ -60,8 +60,8 @@
 
 .fd-zoom-lens {
   position: absolute;
-  width: 150px;
-  height: 150px;
+  width: 225px;
+  height: 225px;
   border: 2px solid rgba(255, 255, 255, 0.8);
   border-radius: 8px;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
@@ -671,7 +671,8 @@ function scanChunk() {
 
     var syncZoomBtn = document.createElement('button');
     syncZoomBtn.className = 'fd-sync-zoom-btn';
-    syncZoomBtn.innerHTML = '🔍🔍 Zsynchronizowana Lupa';
+    syncZoomBtn.innerHTML = '🔍🔍';
+    syncZoomBtn.title = 'Włącz/wyłącz zsynchronizowaną lupę';
     syncZoomBtn.style.marginLeft = '10px';
     syncZoomBtn.onclick = function() {
       isSyncZoomActive = !isSyncZoomActive;
@@ -734,13 +735,13 @@ function scanChunk() {
               image.classList.remove('fd-zoom-active-cursor');
               lens.style.opacity = '0';
           } else {
-              zoomToggle.classList.add('active');
-              image.classList.add('fd-zoom-active-cursor');
               // Turn off global sync zoom to avoid conflict
               if (isSyncZoomActive) {
                   var syncBtn = document.querySelector('.fd-sync-zoom-btn');
                   if(syncBtn) syncBtn.click();
               }
+              zoomToggle.classList.add('active');
+              image.classList.add('fd-zoom-active-cursor');
           }
       };
 
