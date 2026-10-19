@@ -54,8 +54,23 @@
 .fd-modal-images { display: flex; flex-wrap: wrap; gap: 20px; margin-top: 20px; justify-content: center; }
 .fd-modal-img-wrap { text-align: center; background: rgba(128,128,128,.1); padding: 15px; border-radius: 8px; border: 1px solid rgba(128,128,128,.3); max-width: 45%; flex-grow: 1; transition: opacity 0.3s ease, transform 0.3s ease, max-width 0.3s ease, padding 0.3s ease, margin 0.3s ease, border-width 0.3s ease, flex-grow 0.3s ease; transform-origin: top center; overflow: hidden; }
 .fd-modal-img-wrap.fd-collapsing { opacity: 0; transform: scale(0.8); max-width: 0; padding-left: 0; padding-right: 0; margin-left: 0; margin-right: 0; border-width: 0; flex-grow: 0.0001; }
-.fd-modal-img-wrap a { display: block; position: relative; overflow: hidden; }
-.fd-modal-img-wrap img { max-width: 100%; max-height: {$FD_IMAGE_SIZE}vh; object-fit: contain; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.3); vertical-align: top; }
+.fd-modal-img-wrap a { display: inline-block; position: relative; overflow: hidden; line-height: 0; }
+.fd-modal-img-wrap img { max-width: 100%; max-height: {$FD_IMAGE_SIZE}vh; object-fit: contain; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.3); vertical-align: top; cursor: crosshair; }
+
+.fd-zoom-lens {
+  position: absolute;
+  width: 150px;
+  height: 150px;
+  border: 2px solid rgba(255, 255, 255, 0.8);
+  border-radius: 8px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+  background-repeat: no-repeat;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  z-index: 20;
+  transform: translate(-50%, -50%); /* Center the lens over the mouse */
+}
 
 .fd-modal-img-actions-overlay {
   position: absolute;
@@ -626,6 +641,11 @@ function scanChunk() {
       };
       image.alt = img.NAME;
 
+      var lens = document.createElement('div');
+      lens.className = 'fd-zoom-lens';
+      lens.style.backgroundImage = "url('" + img.FULL_URL + "')";
+      lens.style.backgroundSize = "500%"; // 5x zoom for detailed inspection
+
       var overlay = document.createElement('div');
       overlay.className = 'fd-modal-img-actions-overlay';
 
@@ -661,6 +681,7 @@ function scanChunk() {
 
       link.appendChild(loader);
       link.appendChild(image);
+      link.appendChild(lens);
       link.appendChild(overlay);
       wrap.appendChild(link);
 
@@ -704,6 +725,53 @@ function scanChunk() {
 
       wrap.appendChild(info);
       container.appendChild(wrap);
+
+      // Mouse events for synchronized zoom
+      link.addEventListener('mouseenter', function() {
+        var allLenses = document.querySelectorAll('#fd-modal-images .fd-zoom-lens');
+        allLenses.forEach(function(l) { l.style.opacity = '1'; });
+      });
+
+      link.addEventListener('mouseleave', function() {
+        var allLenses = document.querySelectorAll('#fd-modal-images .fd-zoom-lens');
+        allLenses.forEach(function(l) { l.style.opacity = '0'; });
+      });
+
+      link.addEventListener('mousemove', function(e) {
+        var rect = image.getBoundingClientRect();
+
+        // Calculate relative coordinates (0 to 1) within the image
+        var x = e.clientX - rect.left;
+        var y = e.clientY - rect.top;
+
+        // Constrain to image bounds
+        x = Math.max(0, Math.min(x, rect.width));
+        y = Math.max(0, Math.min(y, rect.height));
+
+        var percX = x / rect.width;
+        var percY = y / rect.height;
+
+        var allWrappers = document.querySelectorAll('#fd-modal-images .fd-modal-img-wrap a');
+        allWrappers.forEach(function(wrapper) {
+            var currImage = wrapper.querySelector('img.fd-lazy-img-element');
+            var currLens = wrapper.querySelector('.fd-zoom-lens');
+
+            if (currImage && currLens) {
+                var cRect = currImage.getBoundingClientRect();
+                // Map the relative percentage back to the current image's pixel dimensions
+                var cX = percX * cRect.width;
+                var cY = percY * cRect.height;
+
+                currLens.style.left = cX + 'px';
+                currLens.style.top = cY + 'px';
+
+                // Adjust background position.
+                // We use percentages for background-position as it scales beautifully.
+                // 0% 0% means top left, 100% 100% means bottom right.
+                currLens.style.backgroundPosition = (percX * 100) + '% ' + (percY * 100) + '%';
+            }
+        });
+      });
     });
 
     // Reset classes and show
