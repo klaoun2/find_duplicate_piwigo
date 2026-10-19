@@ -406,15 +406,28 @@ if ($hashed_images > 0 && $hashed_images >= $total_images)
       }
     } else { // 'visual' mode
       $processed_ids = array();
-      foreach ($images_data as $id1 => $img1) {
+      // O(N^2) -> O(N^2/2) by skipping already compared pairs
+      // By copying the array and shifting elements, or keeping track of the current index,
+      // we only compare elements with the elements coming AFTER them in the array.
+
+      // Extract array keys to iterate effectively by index without resetting pointer
+      $image_ids = array_keys($images_data);
+      $num_images_total = count($image_ids);
+
+      for ($i = 0; $i < $num_images_total; $i++) {
+        $id1 = $image_ids[$i];
         if (isset($processed_ids[$id1])) continue;
         
+        $img1 = $images_data[$id1];
         $current_group = array($id1);
         
-        foreach ($images_data as $id2 => $img2) {
-          if ($id1 == $id2) continue;
+        // Start from $i + 1
+        for ($j = $i + 1; $j < $num_images_total; $j++) {
+          $id2 = $image_ids[$j];
           if (isset($processed_ids[$id2])) continue;
           
+          $img2 = $images_data[$id2];
+
           // Check Album Condition
           if ($same_album) {
             // ⚡ Bolt Optimization: Use array_intersect_key instead of array_intersect(array_keys())
@@ -429,14 +442,14 @@ if ($hashed_images > 0 && $hashed_images >= $total_images)
           $dist = find_duplicates_hamming_distance($img1['PHASH'], $img2['PHASH']);
           if ($dist <= $max_diff) {
             $current_group[] = $id2;
+            // Mark as processed immediately so it's excluded from subsequent inner loops
+            $processed_ids[$id2] = true;
           }
         }
         
         if (count($current_group) > 1) {
           $groups[] = $current_group;
-          foreach ($current_group as $gid) {
-            $processed_ids[$gid] = true;
-          }
+          $processed_ids[$id1] = true; // explicitly mark the lead item
         }
       }
     }
