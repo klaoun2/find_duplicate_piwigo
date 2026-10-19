@@ -152,6 +152,56 @@
 }
 .fd-favorite-all-btn:hover { background: rgba(255,193,7,0.2); box-shadow: 0 4px 10px rgba(255,193,7,0.2); transform: translateY(-1px); }
 
+.fd-sync-zoom-btn {
+  background: rgba(90,150,220,0.1);
+  border: 1px solid rgba(90,150,220,0.5);
+  color: inherit;
+  cursor: pointer;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: bold;
+  transition: all 0.2s ease;
+  vertical-align: middle;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.fd-sync-zoom-btn.active {
+  background: rgba(90,150,220,0.6);
+}
+.fd-sync-zoom-btn:hover { background: rgba(90,150,220,0.3); box-shadow: 0 4px 10px rgba(90,150,220,0.2); transform: translateY(-1px); }
+
+.fd-zoom-toggle-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: rgba(0,0,0,0.5);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.4);
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  z-index: 15;
+  backdrop-filter: blur(2px);
+}
+.fd-zoom-toggle-btn.active {
+  background: rgba(90,150,220,0.8);
+  border-color: rgba(255,255,255,0.8);
+}
+.fd-zoom-toggle-btn:hover {
+  background: rgba(0,0,0,0.8);
+  transform: scale(1.1);
+}
+.fd-zoom-toggle-btn.active:hover {
+  background: rgba(90,150,220,1);
+}
+
 .fd-search-bar { display: flex; gap: 10px; margin-bottom: 20px; align-items: center; }
 .fd-search-bar input { padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(128,128,128,.4); background: rgba(128,128,128,.1); color: inherit; flex-grow: 1; max-width: 300px; }
 
@@ -594,7 +644,11 @@ function scanChunk() {
     }, 300); // Wait for transition
   }
 
+  var isSyncZoomActive = false;
+
   function openModal(title, phash, images, groupEl) {
+    isSyncZoomActive = false; // Reset on modal open
+
     var titleEl = document.getElementById('fd-modal-title');
     titleEl.innerHTML = ''; // wyczyszczenie
 
@@ -613,6 +667,24 @@ function scanChunk() {
       });
     };
     titleEl.appendChild(favAllBtn);
+
+    var syncZoomBtn = document.createElement('button');
+    syncZoomBtn.className = 'fd-sync-zoom-btn';
+    syncZoomBtn.innerHTML = '🔍🔍 Zsynchronizowana Lupa';
+    syncZoomBtn.style.marginLeft = '10px';
+    syncZoomBtn.onclick = function() {
+      isSyncZoomActive = !isSyncZoomActive;
+      if (isSyncZoomActive) {
+        syncZoomBtn.classList.add('active');
+        // Disable individual active zooms to avoid confusion
+        document.querySelectorAll('.fd-zoom-toggle-btn.active').forEach(function(b) { b.classList.remove('active'); });
+      } else {
+        syncZoomBtn.classList.remove('active');
+        // Hide all lenses immediately when turned off
+        document.querySelectorAll('#fd-modal-images .fd-zoom-lens').forEach(function(l) { l.style.opacity = '0'; });
+      }
+    };
+    titleEl.appendChild(syncZoomBtn);
 
     var container = document.getElementById('fd-modal-images');
     container.innerHTML = '';
@@ -645,6 +717,27 @@ function scanChunk() {
       lens.className = 'fd-zoom-lens';
       lens.style.backgroundImage = "url('" + img.FULL_URL + "')";
       lens.style.backgroundSize = "500%"; // 5x zoom for detailed inspection
+
+      var zoomToggle = document.createElement('div');
+      zoomToggle.className = 'fd-zoom-toggle-btn';
+      zoomToggle.innerHTML = '🔍';
+      zoomToggle.title = 'Włącz/wyłącz powiększenie dla tego zdjęcia';
+      zoomToggle.onclick = function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          var isActive = zoomToggle.classList.contains('active');
+          if (isActive) {
+              zoomToggle.classList.remove('active');
+              lens.style.opacity = '0';
+          } else {
+              zoomToggle.classList.add('active');
+              // Turn off global sync zoom to avoid conflict
+              if (isSyncZoomActive) {
+                  var syncBtn = document.querySelector('.fd-sync-zoom-btn');
+                  if(syncBtn) syncBtn.click();
+              }
+          }
+      };
 
       var overlay = document.createElement('div');
       overlay.className = 'fd-modal-img-actions-overlay';
@@ -682,6 +775,7 @@ function scanChunk() {
       link.appendChild(loader);
       link.appendChild(image);
       link.appendChild(lens);
+      link.appendChild(zoomToggle);
       link.appendChild(overlay);
       wrap.appendChild(link);
 
@@ -726,51 +820,79 @@ function scanChunk() {
       wrap.appendChild(info);
       container.appendChild(wrap);
 
-      // Mouse events for synchronized zoom
+      // Mouse events for zoom
       link.addEventListener('mouseenter', function() {
-        var allLenses = document.querySelectorAll('#fd-modal-images .fd-zoom-lens');
-        allLenses.forEach(function(l) { l.style.opacity = '1'; });
+        if (isSyncZoomActive) {
+            var allLenses = document.querySelectorAll('#fd-modal-images .fd-zoom-lens');
+            allLenses.forEach(function(l) { l.style.opacity = '1'; });
+        } else if (zoomToggle.classList.contains('active')) {
+            lens.style.opacity = '1';
+        }
       });
 
       link.addEventListener('mouseleave', function() {
-        var allLenses = document.querySelectorAll('#fd-modal-images .fd-zoom-lens');
-        allLenses.forEach(function(l) { l.style.opacity = '0'; });
+        if (isSyncZoomActive) {
+            var allLenses = document.querySelectorAll('#fd-modal-images .fd-zoom-lens');
+            allLenses.forEach(function(l) { l.style.opacity = '0'; });
+        } else {
+            lens.style.opacity = '0';
+        }
       });
 
       link.addEventListener('mousemove', function(e) {
+        // Hide lens when hovering over bottom action bar or the zoom button itself
+        if (e.target.closest('.fd-modal-img-actions-overlay') || e.target.closest('.fd-zoom-toggle-btn')) {
+            if (isSyncZoomActive) {
+                document.querySelectorAll('#fd-modal-images .fd-zoom-lens').forEach(function(l) { l.style.opacity = '0'; });
+            } else {
+                lens.style.opacity = '0';
+            }
+            return;
+        }
+
+        // Show lens if we moved off the action bar but zoom is active
+        if (isSyncZoomActive) {
+            document.querySelectorAll('#fd-modal-images .fd-zoom-lens').forEach(function(l) { l.style.opacity = '1'; });
+        } else if (zoomToggle.classList.contains('active')) {
+            lens.style.opacity = '1';
+        }
+
+        if (!isSyncZoomActive && !zoomToggle.classList.contains('active')) return;
+
         var rect = image.getBoundingClientRect();
 
-        // Calculate relative coordinates (0 to 1) within the image
         var x = e.clientX - rect.left;
         var y = e.clientY - rect.top;
 
-        // Constrain to image bounds
         x = Math.max(0, Math.min(x, rect.width));
         y = Math.max(0, Math.min(y, rect.height));
 
         var percX = x / rect.width;
         var percY = y / rect.height;
 
-        var allWrappers = document.querySelectorAll('#fd-modal-images .fd-modal-img-wrap a');
-        allWrappers.forEach(function(wrapper) {
-            var currImage = wrapper.querySelector('img.fd-lazy-img-element');
-            var currLens = wrapper.querySelector('.fd-zoom-lens');
+        if (isSyncZoomActive) {
+            var allWrappers = document.querySelectorAll('#fd-modal-images .fd-modal-img-wrap a');
+            allWrappers.forEach(function(wrapper) {
+                var currImage = wrapper.querySelector('img.fd-lazy-img-element');
+                var currLens = wrapper.querySelector('.fd-zoom-lens');
 
-            if (currImage && currLens) {
-                var cRect = currImage.getBoundingClientRect();
-                // Map the relative percentage back to the current image's pixel dimensions
-                var cX = percX * cRect.width;
-                var cY = percY * cRect.height;
+                if (currImage && currLens) {
+                    var cRect = currImage.getBoundingClientRect();
+                    var cX = percX * cRect.width;
+                    var cY = percY * cRect.height;
 
-                currLens.style.left = cX + 'px';
-                currLens.style.top = cY + 'px';
-
-                // Adjust background position.
-                // We use percentages for background-position as it scales beautifully.
-                // 0% 0% means top left, 100% 100% means bottom right.
-                currLens.style.backgroundPosition = (percX * 100) + '% ' + (percY * 100) + '%';
-            }
-        });
+                    currLens.style.left = cX + 'px';
+                    currLens.style.top = cY + 'px';
+                    currLens.style.backgroundPosition = (percX * 100) + '% ' + (percY * 100) + '%';
+                }
+            });
+        } else {
+             var cX = percX * rect.width;
+             var cY = percY * rect.height;
+             lens.style.left = cX + 'px';
+             lens.style.top = cY + 'px';
+             lens.style.backgroundPosition = (percX * 100) + '% ' + (percY * 100) + '%';
+        }
       });
     });
 
