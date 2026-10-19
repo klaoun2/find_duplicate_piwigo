@@ -1,10 +1,10 @@
 <?php
 /*
 Plugin Name: Find Duplicates
-Version: 1.0.1
-Description: Narzędzie do wyszukiwania duplikatów i podobnych zdjęć (pHash/dHash).
+Version: 1.1.1
+Description: Tool for finding duplicate and similar images (pHash/dHash/time).
 Plugin URI: 
-Author: Jules
+Author: Oban
 Has Settings: true
 */
 
