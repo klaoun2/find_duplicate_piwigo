@@ -71,7 +71,7 @@ function find_duplicates_compute_dhash($filepath)
 add_event_handler('init', 'find_duplicates_init');
 function find_duplicates_init()
 {
-  load_plugin_lang(FIND_DUPLICATES_ID);
+  load_language('plugin.lang', FIND_DUPLICATES_PATH);
 }
 
 add_event_handler('loc_end_add_uploaded_file', 'find_duplicates_on_upload');
