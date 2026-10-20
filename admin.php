@@ -95,7 +95,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'delete_image') {
   check_pwg_token();
 
   if (!isset($_GET['image_id'])) {
-    echo json_encode(array('status' => 'error', 'error' => 'Missing image_id'));
+    echo json_encode(array('status' => 'error', 'error' => l10n('Missing image_id')));
     die();
   }
 
@@ -155,7 +155,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'toggle_favorite') {
   check_pwg_token();
 
   if (!isset($_GET['image_id'])) {
-    echo json_encode(array('status' => 'error', 'error' => 'Missing image_id'));
+    echo json_encode(array('status' => 'error', 'error' => l10n('Missing image_id')));
     die();
   }
 
@@ -175,7 +175,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'toggle_favorite') {
     
     echo json_encode(array('status' => 'ok', 'is_favorite' => $new_status));
   } else {
-    echo json_encode(array('status' => 'error', 'error' => 'Image not found in duplicates table.'));
+    echo json_encode(array('status' => 'error', 'error' => l10n('Image not found in duplicates table.')));
   }
   die();
 }
@@ -468,7 +468,7 @@ if ($hashed_images > 0 && $hashed_images >= $total_images)
         // Calculate filesize lazily only for duplicate images
         if (!isset($img_data['FILE_SIZE_BYTES'])) {
           $file_path_abs = PHPWG_ROOT_PATH . $img_data['PATH'];
-          $filesize_str = 'Brak danych';
+          $filesize_str = l10n('No data');
           $bytes = 0;
           if (file_exists($file_path_abs)) {
             $bytes = filesize($file_path_abs);
@@ -514,7 +514,7 @@ if ($hashed_images > 0 && $hashed_images >= $total_images)
         }
       }
 
-      $album_name = 'Nieznany album';
+      $album_name = l10n('Unknown album');
       if (!empty($album_counts_for_group)) {
         // Znajdź album z największą liczbą zdjęć (w razie remisu - pierwszy znaleziony z maksimum)
         $max_count = -1;
@@ -646,7 +646,7 @@ foreach ($duplicates as $group) {
   $filtered_duplicates[] = array(
     'PHASH' => $group['PHASH'],
     'TITLE' => $group_title,
-    'TOTAL_SIZE' => isset($group['TOTAL_SIZE']) ? $group['TOTAL_SIZE'] : 'Brak',
+    'TOTAL_SIZE' => isset($group['TOTAL_SIZE']) ? $group['TOTAL_SIZE'] : l10n('No data'),
     'TOTAL_SIZE_BYTES' => isset($group['TOTAL_SIZE_BYTES']) ? $group['TOTAL_SIZE_BYTES'] : 0,
     'OLDEST_DATE_TS' => isset($group['OLDEST_DATE_TS']) ? $group['OLDEST_DATE_TS'] : null,
     'IMAGES' => $group_images_updated
