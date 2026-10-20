@@ -1,0 +1,9 @@
+# Ignore development files when exporting an archive
+/tests export-ignore
+/composer.json export-ignore
+/composer.lock export-ignore
+/phpunit.xml export-ignore
+/.phpunit.result.cache export-ignore
+/.gitignore export-ignore
+/.gitattributes export-ignore
+/.jules export-ignore
