@@ -225,21 +225,21 @@
 <div id="fd-main">
 
 <div class="titrePage">
-  <h2>Wyszukiwarka Duplikatów <span style="font-size: 14px; opacity: 0.6; font-weight: normal; margin-left: 10px;">v{$FD_VERSION|default:'1.0.0'}</span> <span class="fd-saved-space-badge" id="fd-top-saved-space">Zaoszczędzone miejsce: {$FD_TOTAL_SAVED_SPACE}</span></h2>
+  <h2>{'Find Duplicates'|translate} <span style="font-size: 14px; opacity: 0.6; font-weight: normal; margin-left: 10px;">v{$FD_VERSION|default:'1.0.0'}</span> <span class="fd-saved-space-badge" id="fd-top-saved-space">{'Saved space'|translate}: {$FD_TOTAL_SAVED_SPACE}</span></h2>
 </div>
 
 <div class="fd-toast-container" id="fd-toast-container"></div>
 
 <div class="fd-panel">
-  <h3>Stan skanowania galerii</h3>
-  <p>Aby móc skutecznie wyszukiwać duplikaty, wtyczka musi najpierw wygenerować hash (odcisk palca) dla każdego zdjęcia w Twojej galerii.</p>
+  <h3>{'Gallery scanning status'|translate}</h3>
+  <p>{'To effectively find duplicates, the plugin must first generate a hash (fingerprint) for each photo in your gallery.'|translate}</p>
 
   <p>
-    Przeskanowanych zdjęć: <strong id="fd-hashed">{$FD_HASHED_IMAGES}</strong> / <strong id="fd-total">{$FD_TOTAL_IMAGES}</strong>
+    {'Scanned photos:'|translate} <strong id="fd-hashed">{$FD_HASHED_IMAGES}</strong> / <strong id="fd-total">{$FD_TOTAL_IMAGES}</strong>
   </p>
 
   <button id="fd-scan-btn" class="fd-btn" {if $FD_HASHED_IMAGES >= $FD_TOTAL_IMAGES && $FD_TOTAL_IMAGES > 0}disabled{/if}>
-    Skanuj galerię
+    {'Scan gallery'|translate}
   </button>
 
   <div class="fd-progress-container" id="fd-progress-container">
@@ -256,7 +256,7 @@ document.getElementById('fd-scan-btn').addEventListener('click', function() {
   if (isScanning) return;
   isScanning = true;
   this.disabled = true;
-  this.innerText = 'Skanowanie w toku...';
+  this.innerText = '{'Scanning in progress...'|translate|escape:'javascript'}';
   document.getElementById('fd-progress-container').style.display = 'block';
   scanChunk();
 });
@@ -277,15 +277,15 @@ function scanChunk() {
         scanChunk();
       } else {
         isScanning = false;
-        document.getElementById('fd-scan-btn').innerText = 'Skanowanie zakończone';
+        document.getElementById('fd-scan-btn').innerText = '{'Scanning completed'|translate|escape:'javascript'}';
         location.reload(); // Przeładuj, by pokazać duplikaty
       }
     })
     .catch(error => {
       console.error('Error during scan:', error);
-      alert('Wystąpił błąd podczas skanowania. Spróbuj odświeżyć stronę.');
+      alert('{'An error occurred during scanning. Try refreshing the page.'|translate|escape:'javascript'}');
       isScanning = false;
-      document.getElementById('fd-scan-btn').innerText = 'Wznów skanowanie';
+      document.getElementById('fd-scan-btn').innerText = '{'Resume scanning'|translate|escape:'javascript'}';
       document.getElementById('fd-scan-btn').disabled = false;
     });
 }
@@ -294,28 +294,28 @@ function scanChunk() {
 {if $FD_HASHED_IMAGES >= $FD_TOTAL_IMAGES && $FD_TOTAL_IMAGES > 0}
 
 <div class="fd-tabs" id="fd-tabs-container">
-  <div class="fd-tab {if $FD_MODE == 'visual'}active{/if}" data-mode="visual">Wizualne (pHash)</div>
-  <div class="fd-tab {if $FD_MODE == 'time'}active{/if}" data-mode="time">Czas (Rolowany)</div>
+  <div class="fd-tab {if $FD_MODE == 'visual'}active{/if}" data-mode="visual">{'Visual (pHash)'|translate}</div>
+  <div class="fd-tab {if $FD_MODE == 'time'}active{/if}" data-mode="time">{'Time (Rolling)'|translate}</div>
 </div>
 
 <form id="fd-filter-form">
   <input type="hidden" id="fd-mode-input" value="{$FD_MODE}">
 
   <div class="fd-search-bar">
-    <label for="fd-search-group">Filtruj wg nazwy albumu/grupy:</label>
-    <input type="text" id="fd-search-group" value="{$FD_SEARCH_GROUP|escape:'html'}" placeholder="np. Wycieczka...">
-    <button type="submit" class="fd-btn">Szukaj</button>
+    <label for="fd-search-group">{'Filter by album/group name:'|translate}</label>
+    <input type="text" id="fd-search-group" value="{$FD_SEARCH_GROUP|escape:'html'}" placeholder="{'e.g. Trip...'|translate}">
+    <button type="submit" class="fd-btn">{'Search'|translate}</button>
   </div>
 
   <div class="fd-toolbar">
     <label id="fd-similarity-container" {if $FD_MODE == 'time'}style="display:none;"{/if}>
-      Podobieństwo:
+      {'Similarity:'|translate}
       <input type="range" id="fd-similarity-range" min="80" max="100" value="{$FD_SIMILARITY}" oninput="document.getElementById('fd-sim-val').innerText = this.value + '%'">
       <span id="fd-sim-val">{$FD_SIMILARITY}%</span>
     </label>
 
     <label id="fd-time-interval-container" {if $FD_MODE != 'time'}style="display:none;"{/if}>
-      Odstęp czasu (sekundy):
+      {'Time interval (seconds):'|translate}
       <select id="fd-time-interval-select" style="padding: 5px; border-radius: 4px; background: rgba(128,128,128,.1); color: inherit; border: 1px solid rgba(128,128,128,.4);">
         <option value="5" {if $FD_TIME_INTERVAL == 5}selected{/if}>5 s</option>
         <option value="10" {if $FD_TIME_INTERVAL == 10}selected{/if}>10 s</option>
@@ -327,16 +327,16 @@ function scanChunk() {
 
     <label>
       <input type="checkbox" id="fd-same-album-chk" value="1" {if $FD_SAME_ALBUM}checked{/if}>
-      Szukaj tylko w tym samym albumie
+      {'Search only in the same album'|translate}
     </label>
 
     <label style="margin-left: auto; color: #ffc107;">
       <input type="checkbox" id="fd-show-hidden-chk" value="1" {if $FD_SHOW_HIDDEN}checked{/if} style="display:none;">
-      <span title="Pokaż tylko ukryte ulubione" style="font-size: 20px; cursor: pointer; text-shadow: 1px 1px 2px rgba(0,0,0,0.3); opacity: {if $FD_SHOW_HIDDEN}1{else}0.5{/if};">★</span>
+      <span title="{'Show only hidden favorites'|translate}" style="font-size: 20px; cursor: pointer; text-shadow: 1px 1px 2px rgba(0,0,0,0.3); opacity: {if $FD_SHOW_HIDDEN}1{else}0.5{/if};">★</span>
     </label>
 
     <label>
-      Rozmiar obrazka:
+      {'Image size:'|translate}
       <select id="fd-image-size-select" style="padding: 5px; border-radius: 4px; background: rgba(128,128,128,.1); color: inherit; border: 1px solid rgba(128,128,128,.4);">
         <option value="50" {if $FD_IMAGE_SIZE == 50}selected{/if}>50 vh</option>
         <option value="80" {if $FD_IMAGE_SIZE == 80}selected{/if}>80 vh</option>
@@ -345,9 +345,9 @@ function scanChunk() {
     </label>
 
     <label>
-      Filtruj album:
+      {'Filter album:'|translate}
       <select id="fd-filter-album">
-        <option value="0">-- Wszystkie albumy --</option>
+        <option value="0">{'-- All albums --'|translate}</option>
         {foreach from=$FD_CATEGORIES item=cat}
           <option value="{$cat.id}" {if $FD_FILTER_ALBUM == $cat.id}selected{/if}>
             {$cat.display_name|replace:'&amp;nbsp;':'&nbsp;'}
@@ -356,7 +356,7 @@ function scanChunk() {
       </select>
     </label>
 
-    <button type="submit" class="fd-btn">Zastosuj</button>
+    <button type="submit" class="fd-btn">{'Apply'|translate}</button>
   </div>
   <div class="fd-warning" id="fd-warning-msg"></div>
 </form>
@@ -429,7 +429,8 @@ function scanChunk() {
     if (!chk.checked) {
       var comparisons = (totalImages * (totalImages - 1)) / 2;
       var compStr = comparisons.toLocaleString();
-      warnMsg.innerText = 'Uwaga: Wyłączono szukanie w tym samym albumie. Zostanie wykonanych ok. ' + compStr + ' porównań. To może zająć dłuższą chwilę i obciążyć serwer.';
+      var warnTemplate = "{'Warning: Searching in the same album is disabled. Approximately %s comparisons will be made. This may take a while and load the server.'|translate|escape:'javascript'}";
+      warnMsg.innerText = warnTemplate.replace('%s', compStr);
       warnMsg.style.display = 'block';
     } else {
       warnMsg.style.display = 'none';
@@ -444,23 +445,23 @@ function scanChunk() {
 </script>
 
 <div class="fd-panel">
-  <h3>Znalezione duplikaty</h3>
+  <h3>{'Found duplicates'|translate}</h3>
   {if count($FD_DUPLICATES) > 0}
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-      <p style="margin: 0;">Znaleziono <strong>{$FD_TOTAL_GROUPS}</strong> grup powiązanych zdjęć (łączna liczba zdjęć w grupach: <strong>{$FD_TOTAL_IMAGES_IN_GROUPS}</strong>). Strona {$FD_CURRENT_PAGE} z {$FD_TOTAL_PAGES}.</p>
+      <p style="margin: 0;">{'Found %s groups of related photos (total photos in groups: %s). Page %s of %s.'|translate|sprintf:"<strong>{$FD_TOTAL_GROUPS}</strong>":"<strong>{$FD_TOTAL_IMAGES_IN_GROUPS}</strong>":"{$FD_CURRENT_PAGE}":"{$FD_TOTAL_PAGES}"}</p>
 
       <div>
-        <label for="fd-sort-select" style="margin-right: 5px;">Sortuj:</label>
+        <label for="fd-sort-select" style="margin-right: 5px;">{'Sort:'|translate}</label>
         <select id="fd-sort-select" style="padding: 5px; border-radius: 4px; border: 1px solid rgba(128,128,128,.4); background: rgba(128,128,128,.05); color: inherit;">
-          <option value="default" {if $FD_SORT == 'default'}selected{/if}>Domyślnie</option>
-          <option value="size_desc" {if $FD_SORT == 'size_desc'}selected{/if}>Rozmiar malejąco</option>
-          <option value="size_asc" {if $FD_SORT == 'size_asc'}selected{/if}>Rozmiar rosnąco</option>
-          <option value="count_desc" {if $FD_SORT == 'count_desc'}selected{/if}>Liczba zdjęć malejąco</option>
-          <option value="count_asc" {if $FD_SORT == 'count_asc'}selected{/if}>Liczba zdjęć rosnąco</option>
-          <option value="date_desc" {if $FD_SORT == 'date_desc'}selected{/if}>Od najnowszych</option>
-          <option value="date_asc" {if $FD_SORT == 'date_asc'}selected{/if}>Od najstarszych</option>
-          <option value="alpha_asc" {if $FD_SORT == 'alpha_asc'}selected{/if}>Alfabetycznie A-Z</option>
-          <option value="alpha_desc" {if $FD_SORT == 'alpha_desc'}selected{/if}>Alfabetycznie Z-A</option>
+          <option value="default" {if $FD_SORT == 'default'}selected{/if}>{'Default'|translate}</option>
+          <option value="size_desc" {if $FD_SORT == 'size_desc'}selected{/if}>{'Size descending'|translate}</option>
+          <option value="size_asc" {if $FD_SORT == 'size_asc'}selected{/if}>{'Size ascending'|translate}</option>
+          <option value="count_desc" {if $FD_SORT == 'count_desc'}selected{/if}>{'Photo count descending'|translate}</option>
+          <option value="count_asc" {if $FD_SORT == 'count_asc'}selected{/if}>{'Photo count ascending'|translate}</option>
+          <option value="date_desc" {if $FD_SORT == 'date_desc'}selected{/if}>{'From newest'|translate}</option>
+          <option value="date_asc" {if $FD_SORT == 'date_asc'}selected{/if}>{'From oldest'|translate}</option>
+          <option value="alpha_asc" {if $FD_SORT == 'alpha_asc'}selected{/if}>{'Alphabetically A-Z'|translate}</option>
+          <option value="alpha_desc" {if $FD_SORT == 'alpha_desc'}selected{/if}>{'Alphabetically Z-A'|translate}</option>
         </select>
       </div>
     </div>
@@ -486,9 +487,9 @@ function scanChunk() {
       {foreach from=$FD_DUPLICATES item=group}
         <div class="fd-group" data-phash="{$group.PHASH|escape:'html'}" data-title="{$group.TITLE|escape:'html'}" data-images="{$group.IMAGES|@json_encode|escape:'html'}">
           <h4>
-            {$group.TITLE} <span style="font-size: 11px; opacity: 0.6; font-weight: normal;">({if $FD_MODE == 'time'}Zakres czasu{else}Hash: {$group.PHASH}{/if})</span>
-            <button class="fd-btn" style="float: right; padding: 4px 10px; pointer-events: none;">Otwórz grupę</button>
-            <span style="float: right; margin-right: 15px; padding: 4px 10px; background: rgba(128,128,128,0.2); border-radius: 6px; font-size: 13px; font-weight: normal; border: 1px solid rgba(128,128,128,0.4);">Rozmiar: {$group.TOTAL_SIZE|default:'Brak danych'}</span>
+            {$group.TITLE} <span style="font-size: 11px; opacity: 0.6; font-weight: normal;">({if $FD_MODE == 'time'}{'Time range'|translate}{else}{'Hash:'|translate} {$group.PHASH}{/if})</span>
+            <button class="fd-btn" style="float: right; padding: 4px 10px; pointer-events: none;">{'Open group'|translate}</button>
+            <span style="float: right; margin-right: 15px; padding: 4px 10px; background: rgba(128,128,128,0.2); border-radius: 6px; font-size: 13px; font-weight: normal; border: 1px solid rgba(128,128,128,0.4);">{'Size:'|translate} {if $group.TOTAL_SIZE}{$group.TOTAL_SIZE}{else}{'No data'|translate}{/if}</span>
           </h4>
           <div style="display: flex; gap: 15px; flex-wrap: wrap; pointer-events: none; opacity: 0.8; clear: both; padding-top: 10px;">
             {foreach from=$group.IMAGES item=img}
@@ -497,13 +498,13 @@ function scanChunk() {
                 <img src="{$img.FULL_URL}" class="fd-lazy-img-element" onload="this.classList.add('loaded'); this.previousElementSibling.style.display='none';" alt="{$img.NAME}">
                 <div style="position: absolute; bottom: 5px; right: 5px; display: flex; gap: 3px; z-index: 3;">
                   {if $img.ALBUM_COUNT|default:0 > 1}
-                    <span style="background: rgba(0,0,0,0.6); color: white; padding: 2px 5px; border-radius: 4px; font-size: 10px;" title="Należy do wielu albumów">📁 {$img.ALBUM_COUNT}</span>
+                    <span style="background: rgba(0,0,0,0.6); color: white; padding: 2px 5px; border-radius: 4px; font-size: 10px;" title="{'Belongs to multiple albums'|translate}">📁 {$img.ALBUM_COUNT}</span>
                   {/if}
                   {if $img.HAS_GPS|default:0}
-                    <span style="background: rgba(0,0,0,0.6); color: white; padding: 2px 5px; border-radius: 4px; font-size: 10px;" title="Posiada lokalizację GPS">📍</span>
+                    <span style="background: rgba(0,0,0,0.6); color: white; padding: 2px 5px; border-radius: 4px; font-size: 10px;" title="{'Has GPS location'|translate}">📍</span>
                   {/if}
                   {if $img.HAS_MOTION|default:0}
-                    <span style="background: rgba(0,0,0,0.6); color: white; padding: 2px 5px; border-radius: 4px; font-size: 10px;" title="Zarejestrowano jako Motion Picture">🎬</span>
+                    <span style="background: rgba(0,0,0,0.6); color: white; padding: 2px 5px; border-radius: 4px; font-size: 10px;" title="{'Registered as Motion Picture'|translate}">🎬</span>
                   {/if}
                 </div>
                 {if $img.IS_FAVORITE}
@@ -519,7 +520,7 @@ function scanChunk() {
     {if $FD_TOTAL_PAGES > 1}
     <div class="fd-pagination">
       {if $FD_CURRENT_PAGE > 1}
-        <a href="{$FD_ACTION_URL}&fd_mode={$FD_MODE}&similarity={$FD_SIMILARITY}&same_album={$FD_SAME_ALBUM}&fd_show_hidden={$FD_SHOW_HIDDEN}&fd_search_group={$FD_SEARCH_GROUP|escape:'url'}&fd_time_interval={$FD_TIME_INTERVAL}&fd_image_size={$FD_IMAGE_SIZE}&sort={$FD_SORT}&p={$FD_CURRENT_PAGE-1}">Poprzednia</a>
+        <a href="{$FD_ACTION_URL}&fd_mode={$FD_MODE}&similarity={$FD_SIMILARITY}&same_album={$FD_SAME_ALBUM}&fd_show_hidden={$FD_SHOW_HIDDEN}&fd_search_group={$FD_SEARCH_GROUP|escape:'url'}&fd_time_interval={$FD_TIME_INTERVAL}&fd_image_size={$FD_IMAGE_SIZE}&sort={$FD_SORT}&p={$FD_CURRENT_PAGE-1}">{'Previous'|translate}</a>
       {/if}
 
       {for $p=$FD_START_PAGE to $FD_END_PAGE}
@@ -531,13 +532,13 @@ function scanChunk() {
       {/for}
 
       {if $FD_CURRENT_PAGE < $FD_TOTAL_PAGES}
-        <a href="{$FD_ACTION_URL}&fd_mode={$FD_MODE}&similarity={$FD_SIMILARITY}&same_album={$FD_SAME_ALBUM}&fd_show_hidden={$FD_SHOW_HIDDEN}&fd_search_group={$FD_SEARCH_GROUP|escape:'url'}&fd_time_interval={$FD_TIME_INTERVAL}&fd_image_size={$FD_IMAGE_SIZE}&sort={$FD_SORT}&p={$FD_CURRENT_PAGE+1}">Następna</a>
+        <a href="{$FD_ACTION_URL}&fd_mode={$FD_MODE}&similarity={$FD_SIMILARITY}&same_album={$FD_SAME_ALBUM}&fd_show_hidden={$FD_SHOW_HIDDEN}&fd_search_group={$FD_SEARCH_GROUP|escape:'url'}&fd_time_interval={$FD_TIME_INTERVAL}&fd_image_size={$FD_IMAGE_SIZE}&sort={$FD_SORT}&p={$FD_CURRENT_PAGE+1}">{'Next'|translate}</a>
       {/if}
     </div>
     {/if}
 
   {else}
-    <p>Nie znaleziono żadnych duplikatów.</p>
+    <p>{'No duplicates found.'|translate}</p>
   {/if}
 </div>
 {/if}
@@ -548,7 +549,7 @@ function scanChunk() {
 <div id="fd-modal">
   <div id="fd-modal-content">
     <span id="fd-modal-close">&times;</span>
-    <h3 id="fd-modal-title" style="margin-top: 0; border-bottom: 1px solid rgba(128,128,128,.3); padding-bottom: 10px;">Grupa</h3>
+    <h3 id="fd-modal-title" style="margin-top: 0; border-bottom: 1px solid rgba(128,128,128,.3); padding-bottom: 10px;">{'Group'|translate}</h3>
     <div class="fd-modal-images" id="fd-modal-images">
       <!-- Images will be injected here via JS -->
     </div>
@@ -658,7 +659,7 @@ function scanChunk() {
 
     var favAllBtn = document.createElement('button');
     favAllBtn.className = 'fd-favorite-all-btn';
-    favAllBtn.innerHTML = '★ Oznacz wszystkie';
+    favAllBtn.innerHTML = "{'★ Mark all'|translate|escape:'javascript'}";
     favAllBtn.style.marginLeft = '15px';
     favAllBtn.onclick = function() {
       // Find all favorite buttons inside modal that are NOT active
@@ -672,7 +673,7 @@ function scanChunk() {
     var syncZoomBtn = document.createElement('button');
     syncZoomBtn.className = 'fd-sync-zoom-btn';
     syncZoomBtn.innerHTML = '🔍🔍';
-    syncZoomBtn.title = 'Włącz/wyłącz zsynchronizowaną lupę';
+    syncZoomBtn.title = "{'Toggle synchronized magnifier'|translate|escape:'javascript'}";
     syncZoomBtn.style.marginLeft = '10px';
     syncZoomBtn.onclick = function() {
       isSyncZoomActive = !isSyncZoomActive;
@@ -725,7 +726,7 @@ function scanChunk() {
       var zoomToggle = document.createElement('div');
       zoomToggle.className = 'fd-zoom-toggle-btn';
       zoomToggle.innerHTML = '🔍';
-      zoomToggle.title = 'Włącz/wyłącz powiększenie dla tego zdjęcia';
+      zoomToggle.title = "{'Toggle zoom for this photo'|translate|escape:'javascript'}";
       zoomToggle.onclick = function(e) {
           e.preventDefault();
           e.stopPropagation();
@@ -752,7 +753,7 @@ function scanChunk() {
       var isFav = img.IS_FAVORITE == 1;
       favBtn.className = 'fd-favorite-btn ' + (isFav ? 'active' : '');
       favBtn.innerHTML = isFav ? '★' : '☆';
-      favBtn.title = 'Zaznacz/odznacz jako ulubione';
+      favBtn.title = "{'Mark/unmark as favorite'|translate|escape:'javascript'}";
       favBtn.style.margin = '0';
       // Prevent link click when clicking button
       favBtn.onclick = function(e) {
@@ -764,13 +765,14 @@ function scanChunk() {
       var delBtn = document.createElement('button');
       delBtn.className = 'fd-btn-danger';
       delBtn.innerHTML = '🗑️';
-      delBtn.title = 'Usuń zdjęcie';
+      delBtn.title = "{'Delete photo'|translate|escape:'javascript'}";
       delBtn.style.margin = '0';
       // Prevent link click when clicking button
       delBtn.onclick = function(e) {
         e.preventDefault();
         e.stopPropagation();
-        if(confirm('Czy na pewno chcesz bezpowrotnie usunąć to zdjęcie (ID: ' + img.ID + ')?')) {
+        var confirmMsg = "{'Are you sure you want to permanently delete this photo (ID: %s)?'|translate|escape:'javascript'}";
+        if(confirm(confirmMsg.replace('%s', img.ID))) {
           deleteImage(img.ID, phash, wrap, groupEl);
         }
       };
@@ -796,17 +798,17 @@ function scanChunk() {
 
       var badgesHtml = '';
 
-      var creationDate = img.DATE_CREATION ? img.DATE_CREATION : 'Nieznana';
-      badgesHtml += '<span class="fd-badge" title="Data utworzenia">📅 ' + creationDate + '</span>';
+      var creationDate = img.DATE_CREATION ? img.DATE_CREATION : "{'Unknown'|translate|escape:'javascript'}";
+      badgesHtml += '<span class="fd-badge" title="{'Creation date'|translate|escape:'javascript'}">📅 ' + creationDate + '</span>';
 
-      var fileSize = img.FILE_SIZE ? img.FILE_SIZE : 'Brak danych';
-      badgesHtml += '<span class="fd-badge" title="Rozmiar pliku">💾 ' + fileSize + '</span>';
+      var fileSize = img.FILE_SIZE ? img.FILE_SIZE : "{'No data'|translate|escape:'javascript'}";
+      badgesHtml += '<span class="fd-badge" title="{'File size'|translate|escape:'javascript'}">💾 ' + fileSize + '</span>';
 
       if (img.HAS_GPS == 1) {
-          badgesHtml += '<span class="fd-badge badge-gps" title="Posiada lokalizację GPS">📍 GPS</span>';
+          badgesHtml += '<span class="fd-badge badge-gps" title="{'Has GPS location'|translate|escape:'javascript'}">📍 GPS</span>';
       }
       if (img.HAS_MOTION == 1) {
-          badgesHtml += '<span class="fd-badge badge-motion" title="Zarejestrowano jako Motion Picture">🎬 Motion</span>';
+          badgesHtml += '<span class="fd-badge badge-motion" title="{'Registered as Motion Picture'|translate|escape:'javascript'}">🎬 Motion</span>';
       }
 
       if (img.ALBUMS) {
@@ -815,11 +817,11 @@ function scanChunk() {
          for (var cat_id in img.ALBUMS) {
             albumNames.push(img.ALBUMS[cat_id]);
          }
-         badgesHtml += '<span class="fd-badge" title="Albumy: ' + albumNames.join(', ').replace(/"/g, '&quot;') + '">📁 ' + albumCount + ' Album(y)</span>';
+         badgesHtml += '<span class="fd-badge" title="{'Albums:'|translate|escape:'javascript'} ' + albumNames.join(', ').replace(/"/g, '&quot;') + '">📁 ' + albumCount + ' {'Album(s)'|translate|escape:'javascript'}</span>';
       }
 
-      badgesHtml += '<span class="fd-badge" title="ID zdjęcia">#️⃣ ' + img.ID + '</span>';
-      badgesHtml += '<span class="fd-badge" title="Nazwa pliku">📄 ' + img.FILE + '</span>';
+      badgesHtml += '<span class="fd-badge" title="{'Photo ID'|translate|escape:'javascript'}">#️⃣ ' + img.ID + '</span>';
+      badgesHtml += '<span class="fd-badge" title="{'File name'|translate|escape:'javascript'}">📄 ' + img.FILE + '</span>';
 
       info.innerHTML = badgesHtml;
 
@@ -965,14 +967,16 @@ function scanChunk() {
             checkGroupStatusAndClose(updatedImages, groupEl);
           }
         } else {
-          alert('Błąd: ' + (data.error || 'Nieznany błąd'));
+          var errorLabel = "{'Error:'|translate|escape:'javascript'}";
+          var unknownErrorLabel = "{'Unknown error'|translate|escape:'javascript'}";
+          alert(errorLabel + ' ' + (data.error || unknownErrorLabel));
           btnEl.innerHTML = originalText;
         }
         btnEl.disabled = false;
       })
       .catch(error => {
         console.error('Error toggling favorite:', error);
-        alert('Wystąpił błąd komunikacji z serwerem.');
+        alert("{'Communication error with the server.'|translate|escape:'javascript'}");
         btnEl.innerHTML = originalText;
         btnEl.disabled = false;
       });
@@ -1028,11 +1032,13 @@ function scanChunk() {
           var totalFormatted = formatBytes(data.total_saved_bytes || 0);
 
           // Update top counter
-          document.getElementById('fd-top-saved-space').innerText = 'Zaoszczędzone miejsce: ' + totalFormatted;
+          var savedSpaceLabel = "{'Saved space'|translate|escape:'javascript'}";
+          document.getElementById('fd-top-saved-space').innerText = savedSpaceLabel + ': ' + totalFormatted;
 
           // Show toast
           if ((data.deleted_bytes || 0) > 0) {
-            showToast('Zaoszczędzono: ' + deletedFormatted + ' (Łącznie: ' + totalFormatted + ')');
+            var savedLabel = "{'Saved: %s (Total: %s)'|translate|escape:'javascript'}";
+            showToast(savedLabel.replace('%s', deletedFormatted).replace('%s', totalFormatted));
           }
 
           // Trigger collapse animation
@@ -1071,14 +1077,16 @@ function scanChunk() {
             }
           }, 300); // Wait for collapsing to finish
         } else {
-          alert('Błąd usuwania: ' + (data.error || 'Nieznany błąd'));
+          var errorLabel = "{'Deletion error:'|translate|escape:'javascript'}";
+          var unknownErrorLabel = "{'Unknown error'|translate|escape:'javascript'}";
+          alert(errorLabel + ' ' + (data.error || unknownErrorLabel));
           btn.innerHTML = originalText;
           btn.disabled = false;
         }
       })
       .catch(error => {
         console.error('Error deleting image:', error);
-        alert('Wystąpił błąd komunikacji z serwerem.');
+        alert("{'Communication error with the server.'|translate|escape:'javascript'}");
         btn.innerHTML = originalText;
         btn.disabled = false;
       });

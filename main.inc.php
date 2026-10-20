@@ -68,6 +68,12 @@ function find_duplicates_compute_dhash($filepath)
 // -----------------------------------------------------------------
 // Hooks
 // -----------------------------------------------------------------
+add_event_handler('init', 'find_duplicates_init');
+function find_duplicates_init()
+{
+  load_language('plugin.lang', FIND_DUPLICATES_PATH);
+}
+
 add_event_handler('loc_end_add_uploaded_file', 'find_duplicates_on_upload');
 
 function find_duplicates_on_upload($image_infos)
@@ -131,7 +137,7 @@ add_event_handler('get_admin_plugin_menu_links', 'find_duplicates_admin_menu');
 function find_duplicates_admin_menu($menu)
 {
   $menu[] = array(
-    'NAME' => 'Wyszukiwarka Duplikatów',
+    'NAME' => l10n('Find Duplicates'),
     'URL'  => FIND_DUPLICATES_ADMIN,
   );
   return $menu;
