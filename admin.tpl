@@ -54,8 +54,24 @@
 .fd-modal-images { display: flex; flex-wrap: wrap; gap: 20px; margin-top: 20px; justify-content: center; }
 .fd-modal-img-wrap { text-align: center; background: rgba(128,128,128,.1); padding: 15px; border-radius: 8px; border: 1px solid rgba(128,128,128,.3); max-width: 45%; flex-grow: 1; transition: opacity 0.3s ease, transform 0.3s ease, max-width 0.3s ease, padding 0.3s ease, margin 0.3s ease, border-width 0.3s ease, flex-grow 0.3s ease; transform-origin: top center; overflow: hidden; }
 .fd-modal-img-wrap.fd-collapsing { opacity: 0; transform: scale(0.8); max-width: 0; padding-left: 0; padding-right: 0; margin-left: 0; margin-right: 0; border-width: 0; flex-grow: 0.0001; }
-.fd-modal-img-wrap a { display: block; position: relative; overflow: hidden; }
+.fd-modal-img-wrap a { display: inline-block; position: relative; overflow: hidden; line-height: 0; }
 .fd-modal-img-wrap img { max-width: 100%; max-height: {$FD_IMAGE_SIZE}vh; object-fit: contain; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.3); vertical-align: top; }
+.fd-modal-img-wrap img.fd-zoom-active-cursor { cursor: crosshair; }
+
+.fd-zoom-lens {
+  position: absolute;
+  width: 225px;
+  height: 225px;
+  border: 2px solid rgba(255, 255, 255, 0.8);
+  border-radius: 8px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+  background-repeat: no-repeat;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  z-index: 20;
+  transform: translate(-50%, -50%); /* Center the lens over the mouse */
+}
 
 .fd-modal-img-actions-overlay {
   position: absolute;
@@ -136,6 +152,56 @@
   letter-spacing: 0.5px;
 }
 .fd-favorite-all-btn:hover { background: rgba(255,193,7,0.2); box-shadow: 0 4px 10px rgba(255,193,7,0.2); transform: translateY(-1px); }
+
+.fd-sync-zoom-btn {
+  background: rgba(90,150,220,0.1);
+  border: 1px solid rgba(90,150,220,0.5);
+  color: inherit;
+  cursor: pointer;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: bold;
+  transition: all 0.2s ease;
+  vertical-align: middle;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.fd-sync-zoom-btn.active {
+  background: rgba(90,150,220,0.6);
+}
+.fd-sync-zoom-btn:hover { background: rgba(90,150,220,0.3); box-shadow: 0 4px 10px rgba(90,150,220,0.2); transform: translateY(-1px); }
+
+.fd-zoom-toggle-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: rgba(0,0,0,0.5);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.4);
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  z-index: 15;
+  backdrop-filter: blur(2px);
+}
+.fd-zoom-toggle-btn.active {
+  background: rgba(90,150,220,0.8);
+  border-color: rgba(255,255,255,0.8);
+}
+.fd-zoom-toggle-btn:hover {
+  background: rgba(0,0,0,0.8);
+  transform: scale(1.1);
+}
+.fd-zoom-toggle-btn.active:hover {
+  background: rgba(90,150,220,1);
+}
 
 .fd-search-bar { display: flex; gap: 10px; margin-bottom: 20px; align-items: center; }
 .fd-search-bar input { padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(128,128,128,.4); background: rgba(128,128,128,.1); color: inherit; flex-grow: 1; max-width: 300px; }
@@ -579,7 +645,11 @@ function scanChunk() {
     }, 300); // Wait for transition
   }
 
+  var isSyncZoomActive = false;
+
   function openModal(title, phash, images, groupEl) {
+    isSyncZoomActive = false; // Reset on modal open
+
     var titleEl = document.getElementById('fd-modal-title');
     titleEl.innerHTML = ''; // wyczyszczenie
 
@@ -598,6 +668,27 @@ function scanChunk() {
       });
     };
     titleEl.appendChild(favAllBtn);
+
+    var syncZoomBtn = document.createElement('button');
+    syncZoomBtn.className = 'fd-sync-zoom-btn';
+    syncZoomBtn.innerHTML = '🔍🔍';
+    syncZoomBtn.title = 'Włącz/wyłącz zsynchronizowaną lupę';
+    syncZoomBtn.style.marginLeft = '10px';
+    syncZoomBtn.onclick = function() {
+      isSyncZoomActive = !isSyncZoomActive;
+      if (isSyncZoomActive) {
+        syncZoomBtn.classList.add('active');
+        // Disable individual active zooms to avoid confusion
+        document.querySelectorAll('.fd-zoom-toggle-btn.active').forEach(function(b) { b.classList.remove('active'); });
+        document.querySelectorAll('#fd-modal-images img').forEach(function(img) { img.classList.add('fd-zoom-active-cursor'); });
+      } else {
+        syncZoomBtn.classList.remove('active');
+        // Hide all lenses immediately when turned off
+        document.querySelectorAll('#fd-modal-images .fd-zoom-lens').forEach(function(l) { l.style.opacity = '0'; });
+        document.querySelectorAll('#fd-modal-images img').forEach(function(img) { img.classList.remove('fd-zoom-active-cursor'); });
+      }
+    };
+    titleEl.appendChild(syncZoomBtn);
 
     var container = document.getElementById('fd-modal-images');
     container.innerHTML = '';
@@ -625,6 +716,34 @@ function scanChunk() {
           loader.style.display = 'none';
       };
       image.alt = img.NAME;
+
+      var lens = document.createElement('div');
+      lens.className = 'fd-zoom-lens';
+      lens.style.backgroundImage = "url('" + img.FULL_URL + "')";
+      lens.style.backgroundSize = "500%"; // 5x zoom for detailed inspection
+
+      var zoomToggle = document.createElement('div');
+      zoomToggle.className = 'fd-zoom-toggle-btn';
+      zoomToggle.innerHTML = '🔍';
+      zoomToggle.title = 'Włącz/wyłącz powiększenie dla tego zdjęcia';
+      zoomToggle.onclick = function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          var isActive = zoomToggle.classList.contains('active');
+          if (isActive) {
+              zoomToggle.classList.remove('active');
+              image.classList.remove('fd-zoom-active-cursor');
+              lens.style.opacity = '0';
+          } else {
+              // Turn off global sync zoom to avoid conflict
+              if (isSyncZoomActive) {
+                  var syncBtn = document.querySelector('.fd-sync-zoom-btn');
+                  if(syncBtn) syncBtn.click();
+              }
+              zoomToggle.classList.add('active');
+              image.classList.add('fd-zoom-active-cursor');
+          }
+      };
 
       var overlay = document.createElement('div');
       overlay.className = 'fd-modal-img-actions-overlay';
@@ -661,6 +780,8 @@ function scanChunk() {
 
       link.appendChild(loader);
       link.appendChild(image);
+      link.appendChild(lens);
+      link.appendChild(zoomToggle);
       link.appendChild(overlay);
       wrap.appendChild(link);
 
@@ -704,6 +825,100 @@ function scanChunk() {
 
       wrap.appendChild(info);
       container.appendChild(wrap);
+
+      // Mouse events for zoom
+      link.addEventListener('mouseenter', function() {
+        if (isSyncZoomActive) {
+            var allLenses = document.querySelectorAll('#fd-modal-images .fd-zoom-lens');
+            allLenses.forEach(function(l) { l.style.opacity = '1'; });
+        } else if (zoomToggle.classList.contains('active')) {
+            lens.style.opacity = '1';
+        }
+      });
+
+      link.addEventListener('mouseleave', function() {
+        if (isSyncZoomActive) {
+            var allLenses = document.querySelectorAll('#fd-modal-images .fd-zoom-lens');
+            allLenses.forEach(function(l) { l.style.opacity = '0'; });
+        } else {
+            lens.style.opacity = '0';
+        }
+      });
+
+      link.addEventListener('mousemove', function(e) {
+        var rect = image.getBoundingClientRect();
+
+        var x = e.clientX - rect.left;
+        var y = e.clientY - rect.top;
+
+        // Hide lens when hovering near bottom action bar or the zoom button itself (Safety buffer)
+        var bottomActionHeight = 80; // Approximate height of .fd-modal-img-actions-overlay
+        var safetyMarginBottom = 40; // Pixels above the action bar to start hiding
+        var safetyMarginTopRight = 30; // Pixels around the zoom button
+
+        var hideLens = false;
+
+        // 1. Bottom area check (Overlay + Buffer)
+        if (y > (rect.height - bottomActionHeight - safetyMarginBottom)) {
+            hideLens = true;
+        }
+
+        // 2. Top right area check (Zoom Toggle button + Buffer)
+        // Zoom button is approx 36x36 at top:10px right:10px.
+        // We define a block from x > (width - 10 - 36 - buffer) and y < (10 + 36 + buffer)
+        if (x > (rect.width - 46 - safetyMarginTopRight) && y < (46 + safetyMarginTopRight)) {
+            hideLens = true;
+        }
+
+        // Also fallback to direct target check just in case
+        if (hideLens || e.target.closest('.fd-modal-img-actions-overlay') || e.target.closest('.fd-zoom-toggle-btn')) {
+            if (isSyncZoomActive) {
+                document.querySelectorAll('#fd-modal-images .fd-zoom-lens').forEach(function(l) { l.style.opacity = '0'; });
+            } else {
+                lens.style.opacity = '0';
+            }
+            return;
+        }
+
+        // Show lens if we moved off the action zones but zoom is active
+        if (isSyncZoomActive) {
+            document.querySelectorAll('#fd-modal-images .fd-zoom-lens').forEach(function(l) { l.style.opacity = '1'; });
+        } else if (zoomToggle.classList.contains('active')) {
+            lens.style.opacity = '1';
+        }
+
+        if (!isSyncZoomActive && !zoomToggle.classList.contains('active')) return;
+
+        x = Math.max(0, Math.min(x, rect.width));
+        y = Math.max(0, Math.min(y, rect.height));
+
+        var percX = x / rect.width;
+        var percY = y / rect.height;
+
+        if (isSyncZoomActive) {
+            var allWrappers = document.querySelectorAll('#fd-modal-images .fd-modal-img-wrap a');
+            allWrappers.forEach(function(wrapper) {
+                var currImage = wrapper.querySelector('img');
+                var currLens = wrapper.querySelector('.fd-zoom-lens');
+
+                if (currImage && currLens) {
+                    var cRect = currImage.getBoundingClientRect();
+                    var cX = percX * cRect.width;
+                    var cY = percY * cRect.height;
+
+                    currLens.style.left = cX + 'px';
+                    currLens.style.top = cY + 'px';
+                    currLens.style.backgroundPosition = (percX * 100) + '% ' + (percY * 100) + '%';
+                }
+            });
+        } else {
+             var cX = percX * rect.width;
+             var cY = percY * rect.height;
+             lens.style.left = cX + 'px';
+             lens.style.top = cY + 'px';
+             lens.style.backgroundPosition = (percX * 100) + '% ' + (percY * 100) + '%';
+        }
+      });
     });
 
     // Reset classes and show
