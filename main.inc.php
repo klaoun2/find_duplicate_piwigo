@@ -59,8 +59,8 @@ function find_duplicates_compute_dhash($filepath)
     }
   }
 
-  imagedestroy($thumb);
-  imagedestroy($img);
+unset($thumb);
+unset($img);
 
   return $hash; // 64-bit binary string
 }
