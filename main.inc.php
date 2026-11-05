@@ -110,6 +110,40 @@ function find_duplicates_on_delete($ids)
   pwg_query($query);
 }
 
+// Batch set favorite status for a group of image IDs
+function find_duplicates_set_group_favorite($raw_ids, $target_status = 1)
+{
+  $target_status = ((int)$target_status === 0) ? 0 : 1;
+  $id_parts = is_array($raw_ids) ? $raw_ids : explode(',', (string)$raw_ids);
+  $valid_ids = array();
+  foreach ($id_parts as $part) {
+    $id = (int)$part;
+    if ($id > 0) {
+      $valid_ids[$id] = $id;
+    }
+  }
+
+  if (empty($valid_ids)) {
+    return array();
+  }
+
+  $values = array();
+  $batch_size = 500;
+  foreach ($valid_ids as $id) {
+    $values[] = '(' . (int)$id . ', ' . (int)$target_status . ')';
+    if (count($values) >= $batch_size) {
+      pwg_query('INSERT INTO ' . FIND_DUPLICATES_TABLE . ' (image_id, is_favorite) VALUES ' . implode(', ', $values) . ' ON DUPLICATE KEY UPDATE is_favorite = VALUES(is_favorite)');
+      $values = array();
+    }
+  }
+
+  if (!empty($values)) {
+    pwg_query('INSERT INTO ' . FIND_DUPLICATES_TABLE . ' (image_id, is_favorite) VALUES ' . implode(', ', $values) . ' ON DUPLICATE KEY UPDATE is_favorite = VALUES(is_favorite)');
+  }
+
+  return array_values($valid_ids);
+}
+
 
 // Add link to the main left menu in admin panel (under Photos)
 add_event_handler('loc_begin_admin_page', 'find_duplicates_admin_main_menu');

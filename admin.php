@@ -212,14 +212,41 @@ if (isset($_GET['action']) && $_GET['action'] == 'toggle_favorite') {
   if ($row) {
     $new_status = $row['is_favorite'] ? 0 : 1;
     pwg_query('UPDATE ' . FIND_DUPLICATES_TABLE . ' SET is_favorite = ' . $new_status . ' WHERE image_id = ' . $image_id);
-    
-    // Do NOT invalidate cache anymore! 
-    // Favorite status is now injected dynamically during the render phase.
-    
-    echo json_encode(array('status' => 'ok', 'is_favorite' => $new_status));
   } else {
-    echo json_encode(array('status' => 'error', 'error' => l10n('Image not found in duplicates table.')));
+    // Row may not exist yet in Time mode if gallery was not visually scanned
+    $new_status = 1;
+    pwg_query('INSERT INTO ' . FIND_DUPLICATES_TABLE . ' (image_id, phash, is_favorite) VALUES (' . $image_id . ', NULL, 1) ON DUPLICATE KEY UPDATE is_favorite = 1');
   }
+
+  // Do NOT invalidate cache anymore! 
+  // Favorite status is now injected dynamically during the render phase.
+  echo json_encode(array('status' => 'ok', 'is_favorite' => $new_status));
+  die();
+}
+
+// Handle AJAX batch set group favorite
+if (isset($_GET['action']) && $_GET['action'] == 'set_group_favorite') {
+  check_pwg_token();
+
+  $raw_ids = isset($_POST['image_ids']) ? $_POST['image_ids'] : (isset($_GET['image_ids']) ? $_GET['image_ids'] : '');
+  if (empty($raw_ids)) {
+    echo json_encode(array('status' => 'error', 'error' => l10n('Missing image_id')));
+    die();
+  }
+
+  $target_status = (isset($_REQUEST['is_favorite']) && (int)$_REQUEST['is_favorite'] === 0) ? 0 : 1;
+  $valid_ids = find_duplicates_set_group_favorite($raw_ids, $target_status);
+
+  if (empty($valid_ids)) {
+    echo json_encode(array('status' => 'error', 'error' => l10n('Missing image_id')));
+    die();
+  }
+
+  echo json_encode(array(
+    'status' => 'ok',
+    'is_favorite' => $target_status,
+    'updated_ids' => $valid_ids
+  ));
   die();
 }
 
