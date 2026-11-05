@@ -1,7 +1,7 @@
 <?php
 /*
 Plugin Name: Find Duplicates
-Version: 1.1.6
+Version: 1.1.7
 Description: Tool for finding duplicate and similar images (pHash/dHash/time).
 Plugin URI: http://piwigo.org/ext/extension_view.php?eid=1123
 Author: Oban
@@ -13,7 +13,7 @@ defined('PHPWG_ROOT_PATH') or die('Hacking attempt!');
 define('FIND_DUPLICATES_ID', basename(dirname(__FILE__)));
 define('FIND_DUPLICATES_PATH', PHPWG_PLUGINS_PATH . FIND_DUPLICATES_ID . '/');
 define('FIND_DUPLICATES_ADMIN', get_root_url() . 'admin.php?page=plugin-' . FIND_DUPLICATES_ID);
-define('FIND_DUPLICATES_VERSION', '1.1.6');
+define('FIND_DUPLICATES_VERSION', '1.1.7');
 
 global $prefixeTable;
 define('FIND_DUPLICATES_TABLE', $prefixeTable . 'find_duplicates_hashes');
