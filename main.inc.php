@@ -132,13 +132,13 @@ function find_duplicates_set_group_favorite($raw_ids, $target_status = 1)
   foreach ($valid_ids as $id) {
     $values[] = '(' . (int)$id . ', ' . (int)$target_status . ')';
     if (count($values) >= $batch_size) {
-      pwg_query('INSERT INTO ' . FIND_DUPLICATES_TABLE . ' (image_id, is_favorite) VALUES ' . implode(', ', $values) . ' ON DUPLICATE KEY UPDATE is_favorite = VALUES(is_favorite)');
+      pwg_query('INSERT INTO ' . FIND_DUPLICATES_TABLE . ' (image_id, is_favorite) VALUES ' . implode(', ', $values) . ' ON DUPLICATE KEY UPDATE is_favorite = ' . (int)$target_status);
       $values = array();
     }
   }
 
   if (!empty($values)) {
-    pwg_query('INSERT INTO ' . FIND_DUPLICATES_TABLE . ' (image_id, is_favorite) VALUES ' . implode(', ', $values) . ' ON DUPLICATE KEY UPDATE is_favorite = VALUES(is_favorite)');
+    pwg_query('INSERT INTO ' . FIND_DUPLICATES_TABLE . ' (image_id, is_favorite) VALUES ' . implode(', ', $values) . ' ON DUPLICATE KEY UPDATE is_favorite = ' . (int)$target_status);
   }
 
   return array_values($valid_ids);

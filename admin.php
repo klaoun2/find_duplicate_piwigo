@@ -6,6 +6,13 @@ global $template, $page;
 include_once(PHPWG_ROOT_PATH . 'admin/include/functions.php');
 include_once(FIND_DUPLICATES_PATH . 'main.inc.php');
 
+// Verify table existence early (in case plugin is accessed while uninstalled)
+$table_check = pwg_query("SHOW TABLES LIKE '" . FIND_DUPLICATES_TABLE . "'");
+if (!pwg_db_fetch_assoc($table_check)) {
+  $page['errors'][] = l10n('An error occurred.');
+  return;
+}
+
 // Safe check for development - ensure is_favorite column exists
 $safe_check_query = "SHOW COLUMNS FROM " . FIND_DUPLICATES_TABLE . " LIKE 'is_favorite'";
 $safe_check_result = pwg_query($safe_check_query);
@@ -327,16 +334,18 @@ $categories = array();
 $query = 'SELECT id, name, uppercats, global_rank FROM ' . CATEGORIES_TABLE . ' ORDER BY global_rank ASC';
 $result = pwg_query($query);
 while ($row = pwg_db_fetch_assoc($result)) {
-  $depth = substr_count($row['uppercats'], ',');
+  $uppercats_str = (string)$row['uppercats'];
+  $cat_name_str = (string)$row['name'];
+  $depth = substr_count($uppercats_str, ',');
   $indent = str_repeat('&nbsp;&nbsp;&nbsp;', $depth);
   if ($depth > 0) $indent .= '- ';
 
   $categories[] = array(
     'id' => $row['id'],
-    'name' => $row['name'],
-    'uppercats' => $row['uppercats'],
-    'uppercats_arr' => explode(',', $row['uppercats']),
-    'display_name' => $indent . htmlspecialchars($row['name'])
+    'name' => $cat_name_str,
+    'uppercats' => $uppercats_str,
+    'uppercats_arr' => explode(',', $uppercats_str),
+    'display_name' => $indent . htmlspecialchars($cat_name_str)
   );
 }
 
@@ -423,7 +432,7 @@ if ($can_show_duplicates)
       if (!isset($images_data[$img_id])) {
         // Check for Motion Picture based on Google Pixel convention (.MP in filename before extension or at the end of the base name)
         $has_motion = 0;
-        if (stripos($row['file'], '.MP') !== false || stripos($row['name'], '.MP') !== false) {
+        if (stripos((string)$row['file'], '.MP') !== false || stripos((string)$row['name'], '.MP') !== false) {
             $has_motion = 1;
         }
 
@@ -718,8 +727,8 @@ foreach ($duplicates as $group) {
   }
 
   // Filter by group name if search query is provided
-  $album_name = $group['BASE_ALBUM_NAME'];
-  if (!empty($fd_search_group) && stripos($album_name, $fd_search_group) === false) {
+  $album_name = (string)$group['BASE_ALBUM_NAME'];
+  if (!empty($fd_search_group) && stripos($album_name, (string)$fd_search_group) === false) {
     continue;
   }
   
@@ -737,7 +746,8 @@ foreach ($duplicates as $group) {
     'TOTAL_SIZE' => isset($group['TOTAL_SIZE']) ? $group['TOTAL_SIZE'] : l10n('No data'),
     'TOTAL_SIZE_BYTES' => isset($group['TOTAL_SIZE_BYTES']) ? $group['TOTAL_SIZE_BYTES'] : 0,
     'OLDEST_DATE_TS' => isset($group['OLDEST_DATE_TS']) ? $group['OLDEST_DATE_TS'] : null,
-    'IMAGES' => $group_images_updated
+    'IMAGES' => $group_images_updated,
+    'IMAGES_JSON' => json_encode($group_images_updated)
   );
   
   $total_images_in_groups += count($group_images_updated);
