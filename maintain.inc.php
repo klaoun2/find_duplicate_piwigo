@@ -70,5 +70,20 @@ CREATE TABLE IF NOT EXISTS `' . $this->table . '` (
     pwg_query('DROP TABLE IF EXISTS `' . $this->table . '`;');
     conf_delete_param('find_duplicates_similarity');
     conf_delete_param('find_duplicates_same_album');
+    conf_delete_param('find_duplicates_mode');
+    conf_delete_param('find_duplicates_filter_album');
+    conf_delete_param('find_duplicates_time_interval');
+    // Note: find_duplicates_saved_space is intentionally preserved
+
+    $cache_dir = PHPWG_ROOT_PATH . '_data/find_duplicates_cache';
+    if (is_dir($cache_dir)) {
+      $files = glob($cache_dir . '/*.json');
+      if ($files) {
+        foreach ($files as $file) {
+          @unlink($file);
+        }
+      }
+      @rmdir($cache_dir);
+    }
   }
 }

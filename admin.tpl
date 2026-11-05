@@ -510,7 +510,7 @@ function scanChunk() {
 
     <div class="fd-duplicates-list">
       {foreach from=$FD_DUPLICATES item=group}
-        <div class="fd-group" data-phash="{$group.PHASH|escape:'html'}" data-title="{$group.TITLE|escape:'html'}" data-images="{$group.IMAGES|@json_encode|escape:'html'}">
+        <div class="fd-group" data-phash="{$group.PHASH|escape:'html'}" data-title="{$group.TITLE|escape:'html'}" data-images="{$group.IMAGES_JSON|escape:'html'}">
           <h4>
             {$group.TITLE} <span style="font-size: 11px; opacity: 0.6; font-weight: normal;">({if $FD_MODE == 'time'}{'Time range'|translate}{else}{'Hash:'|translate} {$group.PHASH}{/if})</span>
             <button class="fd-btn" style="float: right; padding: 4px 10px; pointer-events: none;">{'Open group'|translate}</button>
