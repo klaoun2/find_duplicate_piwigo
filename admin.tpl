@@ -534,7 +534,7 @@ function scanChunk() {
                   {/if}
                 </div>
                 {if $img.IS_FAVORITE}
-                <div style="color: #ffc107; font-size: 24px; position: absolute; top: -5px; left: 5px; text-shadow: 1px 1px 3px rgba(0,0,0,0.8);">★</div>
+                <div class="fd-thumb-fav-star" style="color: #ffc107; font-size: 24px; position: absolute; top: -5px; left: 5px; text-shadow: 1px 1px 3px rgba(0,0,0,0.8);">★</div>
                 {/if}
               </div>
             {/foreach}
@@ -546,19 +546,19 @@ function scanChunk() {
     {if $FD_TOTAL_PAGES > 1}
     <div class="fd-pagination">
       {if $FD_CURRENT_PAGE > 1}
-        <a href="{$FD_ACTION_URL}&fd_mode={$FD_MODE}&similarity={$FD_SIMILARITY}&same_album={$FD_SAME_ALBUM}&fd_show_hidden={$FD_SHOW_HIDDEN}&fd_search_group={$FD_SEARCH_GROUP|escape:'url'}&fd_time_interval={$FD_TIME_INTERVAL}&sort={$FD_SORT}&p={$FD_CURRENT_PAGE-1}">{'Previous'|translate}</a>
+        <a href="{$FD_ACTION_URL}&fd_mode={$FD_MODE}&similarity={$FD_SIMILARITY}&same_album={$FD_SAME_ALBUM}&fd_show_hidden={$FD_SHOW_HIDDEN}&fd_search_group={$FD_SEARCH_GROUP|escape:'url'}&fd_time_interval={$FD_TIME_INTERVAL}&fd_filter_album={$FD_FILTER_ALBUM}&sort={$FD_SORT}&p={$FD_CURRENT_PAGE-1}">{'Previous'|translate}</a>
       {/if}
 
       {for $p=$FD_START_PAGE to $FD_END_PAGE}
         {if $p == $FD_CURRENT_PAGE}
           <span class="fd-current">{$p}</span>
         {else}
-          <a href="{$FD_ACTION_URL}&fd_mode={$FD_MODE}&similarity={$FD_SIMILARITY}&same_album={$FD_SAME_ALBUM}&fd_show_hidden={$FD_SHOW_HIDDEN}&fd_search_group={$FD_SEARCH_GROUP|escape:'url'}&fd_time_interval={$FD_TIME_INTERVAL}&sort={$FD_SORT}&p={$p}">{$p}</a>
+          <a href="{$FD_ACTION_URL}&fd_mode={$FD_MODE}&similarity={$FD_SIMILARITY}&same_album={$FD_SAME_ALBUM}&fd_show_hidden={$FD_SHOW_HIDDEN}&fd_search_group={$FD_SEARCH_GROUP|escape:'url'}&fd_time_interval={$FD_TIME_INTERVAL}&fd_filter_album={$FD_FILTER_ALBUM}&sort={$FD_SORT}&p={$p}">{$p}</a>
         {/if}
       {/for}
 
       {if $FD_CURRENT_PAGE < $FD_TOTAL_PAGES}
-        <a href="{$FD_ACTION_URL}&fd_mode={$FD_MODE}&similarity={$FD_SIMILARITY}&same_album={$FD_SAME_ALBUM}&fd_show_hidden={$FD_SHOW_HIDDEN}&fd_search_group={$FD_SEARCH_GROUP|escape:'url'}&fd_time_interval={$FD_TIME_INTERVAL}&sort={$FD_SORT}&p={$FD_CURRENT_PAGE+1}">{'Next'|translate}</a>
+        <a href="{$FD_ACTION_URL}&fd_mode={$FD_MODE}&similarity={$FD_SIMILARITY}&same_album={$FD_SAME_ALBUM}&fd_show_hidden={$FD_SHOW_HIDDEN}&fd_search_group={$FD_SEARCH_GROUP|escape:'url'}&fd_time_interval={$FD_TIME_INTERVAL}&fd_filter_album={$FD_FILTER_ALBUM}&sort={$FD_SORT}&p={$FD_CURRENT_PAGE+1}">{'Next'|translate}</a>
       {/if}
     </div>
     {/if}
@@ -637,6 +637,14 @@ function scanChunk() {
     }, 300); // Wait for transition
   }
 
+  function fadeOutGroupAndCloseModal(groupEl) {
+    closeModal();
+    groupEl.classList.add('fd-fading-out');
+    setTimeout(function() {
+      groupEl.style.display = 'none';
+    }, 300);
+  }
+
   function checkGroupStatusAndClose(images, groupEl) {
     var showHiddenChk = document.getElementById('fd-show-hidden-chk');
     var showHidden = showHiddenChk ? showHiddenChk.checked : false;
@@ -649,21 +657,12 @@ function scanChunk() {
         }
     }
 
-    var shouldFadeOut = false;
-    if (showHidden) {
-      shouldFadeOut = !allFavorites;
-    } else {
-      shouldFadeOut = allFavorites;
-    }
+    var shouldFadeOut = showHidden ? !allFavorites : allFavorites;
 
     if (shouldFadeOut) {
       // Use setTimeout to allow the button to visually update before closing
       setTimeout(function() {
-        closeModal();
-        groupEl.classList.add('fd-fading-out');
-        setTimeout(function() {
-          groupEl.style.display = 'none';
-        }, 300);
+        fadeOutGroupAndCloseModal(groupEl);
       }, 150);
     }
   }
@@ -672,15 +671,6 @@ function scanChunk() {
     var wrap = groupEl.querySelector('.fd-img-wrap[data-id="' + imageId + '"]');
     if (!wrap) return;
     var existingStar = wrap.querySelector('.fd-thumb-fav-star');
-    if (!existingStar) {
-      var divs = wrap.querySelectorAll('div');
-      divs.forEach(function(d) {
-        if (d.textContent.trim() === '★') {
-          existingStar = d;
-          existingStar.classList.add('fd-thumb-fav-star');
-        }
-      });
-    }
     if (isFav) {
       if (!existingStar) {
         var starDiv = document.createElement('div');
@@ -793,6 +783,17 @@ function scanChunk() {
       }
     }
   });
+
+  function setZoomLensOpacity(lens, zoomToggle, visible) {
+    var opacityVal = visible ? '1' : '0';
+    if (isSyncZoomActive) {
+      document.querySelectorAll('#fd-modal-images .fd-zoom-lens').forEach(function(l) {
+        l.style.opacity = opacityVal;
+      });
+    } else if (!visible || zoomToggle.classList.contains('active')) {
+      lens.style.opacity = opacityVal;
+    }
+  }
 
   function openModal(title, phash, images, groupEl) {
     isSyncZoomActive = false; // Reset on modal open
@@ -985,21 +986,11 @@ function scanChunk() {
 
       // Mouse events for zoom
       link.addEventListener('mouseenter', function() {
-        if (isSyncZoomActive) {
-            var allLenses = document.querySelectorAll('#fd-modal-images .fd-zoom-lens');
-            allLenses.forEach(function(l) { l.style.opacity = '1'; });
-        } else if (zoomToggle.classList.contains('active')) {
-            lens.style.opacity = '1';
-        }
+        setZoomLensOpacity(lens, zoomToggle, true);
       });
 
       link.addEventListener('mouseleave', function() {
-        if (isSyncZoomActive) {
-            var allLenses = document.querySelectorAll('#fd-modal-images .fd-zoom-lens');
-            allLenses.forEach(function(l) { l.style.opacity = '0'; });
-        } else {
-            lens.style.opacity = '0';
-        }
+        setZoomLensOpacity(lens, zoomToggle, false);
       });
 
       link.addEventListener('mousemove', function(e) {
@@ -1029,20 +1020,12 @@ function scanChunk() {
 
         // Also fallback to direct target check just in case
         if (hideLens || e.target.closest('.fd-modal-img-actions-overlay') || e.target.closest('.fd-zoom-toggle-btn')) {
-            if (isSyncZoomActive) {
-                document.querySelectorAll('#fd-modal-images .fd-zoom-lens').forEach(function(l) { l.style.opacity = '0'; });
-            } else {
-                lens.style.opacity = '0';
-            }
+            setZoomLensOpacity(lens, zoomToggle, false);
             return;
         }
 
         // Show lens if we moved off the action zones but zoom is active
-        if (isSyncZoomActive) {
-            document.querySelectorAll('#fd-modal-images .fd-zoom-lens').forEach(function(l) { l.style.opacity = '1'; });
-        } else if (zoomToggle.classList.contains('active')) {
-            lens.style.opacity = '1';
-        }
+        setZoomLensOpacity(lens, zoomToggle, true);
 
         if (!isSyncZoomActive && !zoomToggle.classList.contains('active')) return;
 
@@ -1190,11 +1173,7 @@ function scanChunk() {
 
               // If only 1 image left, close modal then fade out group
               if (updatedImages.length <= 1) {
-                closeModal();
-                groupEl.classList.add('fd-fading-out');
-                setTimeout(function() {
-                  groupEl.style.display = 'none';
-                }, 300);
+                fadeOutGroupAndCloseModal(groupEl);
               } else {
                 // Check if the remaining images satisfy the "all favorites" condition
                 checkGroupStatusAndClose(updatedImages, groupEl);

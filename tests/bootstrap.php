@@ -19,8 +19,9 @@ if (!function_exists('add_event_handler')) {
 }
 
 // Global variable to capture SQL queries for assertions
-global $captured_queries;
+global $captured_queries, $mock_fetch_assoc_result;
 $captured_queries = [];
+$mock_fetch_assoc_result = false;
 
 if (!function_exists('pwg_query')) {
     function pwg_query($query) {
@@ -30,13 +31,21 @@ if (!function_exists('pwg_query')) {
     }
 }
 
+if (!function_exists('pwg_db_fetch_assoc')) {
+    function pwg_db_fetch_assoc($result) {
+        global $mock_fetch_assoc_result;
+        return $mock_fetch_assoc_result;
+    }
+}
+
 // Include the main plugin file to make functions available
 require_once __DIR__ . '/../main.inc.php';
 
 // Helper function to reset test state
 function reset_captured_queries() {
-    global $captured_queries;
+    global $captured_queries, $mock_fetch_assoc_result;
     $captured_queries = [];
+    $mock_fetch_assoc_result = false;
 }
 
 // Helper function to get captured queries
