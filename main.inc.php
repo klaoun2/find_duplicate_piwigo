@@ -1,7 +1,7 @@
 <?php
 /*
 Plugin Name: Find Duplicates
-Version: 1.1.6
+Version: 1.1.7
 Description: Tool for finding duplicate and similar images (pHash/dHash/time).
 Plugin URI: http://piwigo.org/ext/extension_view.php?eid=1123
 Author: Oban
@@ -13,7 +13,7 @@ defined('PHPWG_ROOT_PATH') or die('Hacking attempt!');
 define('FIND_DUPLICATES_ID', basename(dirname(__FILE__)));
 define('FIND_DUPLICATES_PATH', PHPWG_PLUGINS_PATH . FIND_DUPLICATES_ID . '/');
 define('FIND_DUPLICATES_ADMIN', get_root_url() . 'admin.php?page=plugin-' . FIND_DUPLICATES_ID);
-define('FIND_DUPLICATES_VERSION', '1.1.6');
+define('FIND_DUPLICATES_VERSION', '1.1.7');
 
 global $prefixeTable;
 define('FIND_DUPLICATES_TABLE', $prefixeTable . 'find_duplicates_hashes');
@@ -108,6 +108,40 @@ function find_duplicates_on_delete($ids)
     DELETE FROM ' . FIND_DUPLICATES_TABLE . '
     WHERE image_id IN (' . implode(',', $ids) . ')';
   pwg_query($query);
+}
+
+// Batch set favorite status for a group of image IDs
+function find_duplicates_set_group_favorite($raw_ids, $target_status = 1)
+{
+  $target_status = ((int)$target_status === 0) ? 0 : 1;
+  $id_parts = is_array($raw_ids) ? $raw_ids : explode(',', (string)$raw_ids);
+  $valid_ids = array();
+  foreach ($id_parts as $part) {
+    $id = (int)$part;
+    if ($id > 0) {
+      $valid_ids[$id] = $id;
+    }
+  }
+
+  if (empty($valid_ids)) {
+    return array();
+  }
+
+  $values = array();
+  $batch_size = 500;
+  foreach ($valid_ids as $id) {
+    $values[] = '(' . (int)$id . ', ' . (int)$target_status . ')';
+    if (count($values) >= $batch_size) {
+      pwg_query('INSERT INTO ' . FIND_DUPLICATES_TABLE . ' (image_id, is_favorite) VALUES ' . implode(', ', $values) . ' ON DUPLICATE KEY UPDATE is_favorite = VALUES(is_favorite)');
+      $values = array();
+    }
+  }
+
+  if (!empty($values)) {
+    pwg_query('INSERT INTO ' . FIND_DUPLICATES_TABLE . ' (image_id, is_favorite) VALUES ' . implode(', ', $values) . ' ON DUPLICATE KEY UPDATE is_favorite = VALUES(is_favorite)');
+  }
+
+  return array_values($valid_ids);
 }
 
 

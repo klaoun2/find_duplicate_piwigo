@@ -514,6 +514,7 @@ function scanChunk() {
           <h4>
             {$group.TITLE} <span style="font-size: 11px; opacity: 0.6; font-weight: normal;">({if $FD_MODE == 'time'}{'Time range'|translate}{else}{'Hash:'|translate} {$group.PHASH}{/if})</span>
             <button class="fd-btn" style="float: right; padding: 4px 10px; pointer-events: none;">{'Open group'|translate}</button>
+            <button type="button" class="fd-favorite-all-btn fd-group-fav-btn" data-target-status="{if $FD_SHOW_HIDDEN}0{else}1{/if}" title="{if $FD_SHOW_HIDDEN}{'☆ Unmark all'|translate}{else}{'★ Mark all'|translate}{/if}" style="float: right; margin-right: 10px; padding: 4px 10px; font-size: 12px;">{if $FD_SHOW_HIDDEN}{'☆ Unmark'|translate}{else}{'★ Favorite'|translate}{/if}</button>
             <span style="float: right; margin-right: 15px; padding: 4px 10px; background: rgba(128,128,128,0.2); border-radius: 6px; font-size: 13px; font-weight: normal; border: 1px solid rgba(128,128,128,0.4);">{'Size:'|translate} {if $group.TOTAL_SIZE}{$group.TOTAL_SIZE}{else}{'No data'|translate}{/if}</span>
           </h4>
           <div style="display: flex; gap: 15px; flex-wrap: wrap; pointer-events: none; opacity: 0.8; clear: both; padding-top: 10px;">
@@ -586,20 +587,7 @@ function scanChunk() {
   var modal = document.getElementById('fd-modal');
   var closeBtn = document.getElementById('fd-modal-close');
   var groups = document.querySelectorAll('.fd-group');
-
-  // Otwieranie modala
-  groups.forEach(function(groupEl) {
-    groupEl.addEventListener('click', function() {
-      var title = groupEl.getAttribute('data-title');
-      var phash = groupEl.getAttribute('data-phash');
-      var imagesJson = groupEl.getAttribute('data-images');
-
-      if(imagesJson) {
-        var images = JSON.parse(imagesJson);
-        openModal(title, phash, images, groupEl);
-      }
-    });
-  });
+  var isSyncZoomActive = false;
 
   // Format Bytes Helper for JS
   function formatBytes(bytes) {
@@ -635,6 +623,151 @@ function scanChunk() {
     }, 4000);
   }
 
+  function closeModal(onComplete) {
+    if (!modal.classList.contains('fd-modal-show')) {
+      if (typeof onComplete === 'function') onComplete();
+      return;
+    }
+    modal.classList.remove('fd-modal-show');
+    modal.classList.add('fd-modal-closing');
+    setTimeout(function() {
+      modal.style.display = 'none';
+      modal.classList.remove('fd-modal-closing');
+      if (typeof onComplete === 'function') onComplete();
+    }, 300); // Wait for transition
+  }
+
+  function checkGroupStatusAndClose(images, groupEl) {
+    var showHiddenChk = document.getElementById('fd-show-hidden-chk');
+    var showHidden = showHiddenChk ? showHiddenChk.checked : false;
+
+    var allFavorites = true;
+    for (var i = 0; i < images.length; i++) {
+        if (images[i].IS_FAVORITE != 1) {
+            allFavorites = false;
+            break;
+        }
+    }
+
+    var shouldFadeOut = false;
+    if (showHidden) {
+      shouldFadeOut = !allFavorites;
+    } else {
+      shouldFadeOut = allFavorites;
+    }
+
+    if (shouldFadeOut) {
+      // Use setTimeout to allow the button to visually update before closing
+      setTimeout(function() {
+        closeModal();
+        groupEl.classList.add('fd-fading-out');
+        setTimeout(function() {
+          groupEl.style.display = 'none';
+        }, 300);
+      }, 150);
+    }
+  }
+
+  function updateGroupThumbnailStar(groupEl, imageId, isFav) {
+    var wrap = groupEl.querySelector('.fd-img-wrap[data-id="' + imageId + '"]');
+    if (!wrap) return;
+    var existingStar = wrap.querySelector('.fd-thumb-fav-star');
+    if (!existingStar) {
+      var divs = wrap.querySelectorAll('div');
+      divs.forEach(function(d) {
+        if (d.textContent.trim() === '★') {
+          existingStar = d;
+          existingStar.classList.add('fd-thumb-fav-star');
+        }
+      });
+    }
+    if (isFav) {
+      if (!existingStar) {
+        var starDiv = document.createElement('div');
+        starDiv.className = 'fd-thumb-fav-star';
+        starDiv.style.cssText = 'color: #ffc107; font-size: 24px; position: absolute; top: -5px; left: 5px; text-shadow: 1px 1px 3px rgba(0,0,0,0.8);';
+        starDiv.innerText = '★';
+        wrap.appendChild(starDiv);
+      }
+    } else if (existingStar && existingStar.parentNode) {
+      existingStar.parentNode.removeChild(existingStar);
+    }
+  }
+
+  function setGroupFavorite(groupEl, targetStatus, btnEl, onSuccess) {
+    var imagesJson = groupEl.getAttribute('data-images');
+    if (!imagesJson) return;
+    var images = JSON.parse(imagesJson);
+    if (!images || !images.length) return;
+
+    var ids = images.map(function(img) { return img.ID; }).join(',');
+    var originalText = btnEl.innerHTML;
+    btnEl.innerHTML = '...';
+    btnEl.disabled = true;
+
+    var url = actionUrl + '&action=set_group_favorite&image_ids=' + encodeURIComponent(ids) + '&is_favorite=' + encodeURIComponent(targetStatus) + '&pwg_token=' + pwgToken;
+
+    fetch(url)
+      .then(response => response.json())
+      .then(data => {
+        if (data.status === 'ok') {
+          var newFav = data.is_favorite == 1 ? 1 : 0;
+          var updatedImages = images.map(function(img) {
+            img.IS_FAVORITE = newFav;
+            updateGroupThumbnailStar(groupEl, img.ID, newFav === 1);
+            return img;
+          });
+          groupEl.setAttribute('data-images', JSON.stringify(updatedImages));
+
+          if (typeof onSuccess === 'function') {
+            onSuccess(updatedImages, newFav);
+          }
+
+          btnEl.innerHTML = originalText;
+          btnEl.disabled = false;
+          checkGroupStatusAndClose(updatedImages, groupEl);
+        } else {
+          var errorLabel = "{'Error:'|translate|escape:'javascript'}";
+          var unknownErrorLabel = "{'Unknown error'|translate|escape:'javascript'}";
+          alert(errorLabel + ' ' + (data.error || unknownErrorLabel));
+          btnEl.innerHTML = originalText;
+          btnEl.disabled = false;
+        }
+      })
+      .catch(error => {
+        console.error('Error setting group favorite:', error);
+        alert("{'Communication error with the server.'|translate|escape:'javascript'}");
+        btnEl.innerHTML = originalText;
+        btnEl.disabled = false;
+      });
+  }
+
+  // Otwieranie modala oraz obsługa przycisku ulubionych na karcie grupy
+  groups.forEach(function(groupEl) {
+    var groupFavBtn = groupEl.querySelector('.fd-group-fav-btn');
+    if (groupFavBtn) {
+      groupFavBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var targetStatus = parseInt(groupFavBtn.getAttribute('data-target-status'), 10);
+        if (isNaN(targetStatus)) targetStatus = 1;
+        setGroupFavorite(groupEl, targetStatus, groupFavBtn);
+      });
+    }
+
+    groupEl.addEventListener('click', function(e) {
+      if (e.target.closest('.fd-group-fav-btn')) return;
+      var title = groupEl.getAttribute('data-title');
+      var phash = groupEl.getAttribute('data-phash');
+      var imagesJson = groupEl.getAttribute('data-images');
+
+      if(imagesJson) {
+        var images = JSON.parse(imagesJson);
+        openModal(title, phash, images, groupEl);
+      }
+    });
+  });
+
   // Zamykanie modala
   closeBtn.addEventListener('click', function() {
     closeModal();
@@ -661,18 +794,6 @@ function scanChunk() {
     }
   });
 
-  function closeModal(onComplete) {
-    modal.classList.remove('fd-modal-show');
-    modal.classList.add('fd-modal-closing');
-    setTimeout(function() {
-      modal.style.display = 'none';
-      modal.classList.remove('fd-modal-closing');
-      if (typeof onComplete === 'function') onComplete();
-    }, 300); // Wait for transition
-  }
-
-  var isSyncZoomActive = false;
-
   function openModal(title, phash, images, groupEl) {
     isSyncZoomActive = false; // Reset on modal open
 
@@ -682,15 +803,24 @@ function scanChunk() {
     var titleText = document.createTextNode(title + ' ');
     titleEl.appendChild(titleText);
 
+    var showHiddenChk = document.getElementById('fd-show-hidden-chk');
+    var showHidden = showHiddenChk ? showHiddenChk.checked : false;
+    var modalTargetStatus = showHidden ? 0 : 1;
+
     var favAllBtn = document.createElement('button');
     favAllBtn.className = 'fd-favorite-all-btn';
-    favAllBtn.innerHTML = "{'★ Mark all'|translate|escape:'javascript'}";
+    favAllBtn.innerHTML = showHidden ? "{'☆ Unmark all'|translate|escape:'javascript'}" : "{'★ Mark all'|translate|escape:'javascript'}";
     favAllBtn.style.marginLeft = '15px';
     favAllBtn.onclick = function() {
-      // Find all favorite buttons inside modal that are NOT active
-      var buttons = document.getElementById('fd-modal-images').querySelectorAll('.fd-favorite-btn:not(.active)');
-      buttons.forEach(function(btn) {
-        btn.click();
+      setGroupFavorite(groupEl, modalTargetStatus, favAllBtn, function(updatedImages, newFav) {
+        var buttons = document.getElementById('fd-modal-images').querySelectorAll('.fd-favorite-btn');
+        buttons.forEach(function(btn) {
+          btn.className = 'fd-favorite-btn ' + (newFav ? 'active' : '');
+          btn.innerHTML = newFav ? '★' : '☆';
+        });
+        images.forEach(function(img) {
+          img.IS_FAVORITE = newFav;
+        });
       });
     };
     titleEl.appendChild(favAllBtn);
@@ -976,6 +1106,7 @@ function scanChunk() {
 
           btnEl.className = 'fd-favorite-btn ' + (isFav ? 'active' : '');
           btnEl.innerHTML = isFav ? '★' : '☆';
+          updateGroupThumbnailStar(groupEl, imageId, isFav);
 
           // Update JSON data on the group DOM element
           var imagesJson = groupEl.getAttribute('data-images');
@@ -1005,37 +1136,6 @@ function scanChunk() {
         btnEl.innerHTML = originalText;
         btnEl.disabled = false;
       });
-  }
-
-  function checkGroupStatusAndClose(images, groupEl) {
-    var showHiddenChk = document.getElementById('fd-show-hidden-chk');
-    var showHidden = showHiddenChk ? showHiddenChk.checked : false;
-
-    var allFavorites = true;
-    for (var i = 0; i < images.length; i++) {
-        if (images[i].IS_FAVORITE != 1) {
-            allFavorites = false;
-            break;
-        }
-    }
-
-    var shouldFadeOut = false;
-    if (showHidden) {
-      shouldFadeOut = !allFavorites;
-    } else {
-      shouldFadeOut = allFavorites;
-    }
-
-    if (shouldFadeOut) {
-      // Use setTimeout to allow the button to visually update before closing
-      setTimeout(function() {
-        closeModal();
-        groupEl.classList.add('fd-fading-out');
-        setTimeout(function() {
-          groupEl.style.display = 'none';
-        }, 300);
-      }, 150);
-    }
   }
 
   function deleteImage(imageId, groupPhash, wrapEl, groupEl) {
