@@ -7,6 +7,10 @@ Find Duplicates is a plugin for [Piwigo](https://piwigo.org/) that helps you fin
 - **Time Similarity:** Can group photos taken around the same time.
 - **Easy Review:** Intuitive admin interface to review and manage duplicates.
 
+## Requirements
+- **PHP:** 7.4 or newer (fully compatible with PHP 8.x) with the **GD** extension (`ext-gd`) enabled for visual hash generation.
+- **Database:** MySQL 5.7+ / 8.x or MariaDB 10.x+.
+
 ## Installation
 
 1. Download the latest release from the [Piwigo Extension directory](https://piwigo.org/ext/index.php?eid=1123)
@@ -31,6 +35,10 @@ Find Duplicates to wtyczka dla galerii [Piwigo](https://piwigo.org/), która pom
 - **Podobieństwo wizualne:** Wykorzystuje algorytm dHash do wyszukiwania zdjęć, które wyglądają podobnie, nawet jeśli różnią się rozdzielczością lub formatem.
 - **Podobieństwo czasowe:** Grupuje zdjęcia wykonane w podobnym czasie.
 - **Łatwy przegląd:** Intuicyjny interfejs w panelu administratora do przeglądania i zarządzania duplikatami.
+
+## Wymagania
+- **PHP:** 7.4 lub nowsze (pełna kompatybilność z PHP 8.x) z włączonym rozszerzeniem **GD** (`ext-gd`, wymagane do generowania hashów wizualnych).
+- **Baza danych:** MySQL 5.7+ / 8.x lub MariaDB 10.x+.
 
 ## Instalacja
 
