@@ -10,21 +10,134 @@
   backdrop-filter: blur(4px);
 }
 #fd-main .fd-panel h3 { margin-top: 0; font-size: 1.2em; }
-#fd-main .fd-btn {
-  padding: 8px 14px;
+#fd-main .fd-btn,
+.fd-btn,
+.fd-favorite-all-btn,
+.fd-sync-zoom-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 14px;
   border-radius: 6px;
-  border: 1px solid rgba(90,150,220,.5);
-  background: rgba(90,150,220,.12);
-  color: inherit;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
   cursor: pointer;
-  font-size: 14px;
+  transition: all 0.2s ease;
+  vertical-align: middle;
+  box-sizing: border-box;
+  text-transform: none;
+  letter-spacing: normal;
 }
-#fd-main .fd-btn:hover { background: rgba(90,150,220,.25); }
-#fd-main .fd-btn:disabled { background: rgba(128,128,128,.1); border-color: rgba(128,128,128,.2); cursor: not-allowed; opacity: 0.6; }
+#fd-main .fd-btn,
+.fd-btn {
+  border: 1px solid rgba(90,150,220,.6);
+  background: rgba(90,150,220,.16);
+  color: #66b8ff;
+}
+#fd-main .fd-btn:hover,
+.fd-btn:hover,
+#fd-main .fd-group:hover:not(:has(.fd-group-fav-btn:hover)) .fd-open-group-btn {
+  background: rgba(90,150,220,.28);
+  border-color: rgba(90,150,220,.85);
+  box-shadow: 0 2px 8px rgba(90,150,220,.25);
+  transform: translateY(-1px);
+}
+#fd-main .fd-btn:disabled,
+.fd-btn:disabled,
+.fd-favorite-all-btn:disabled,
+.fd-sync-zoom-btn:disabled {
+  background: rgba(128,128,128,.1);
+  border-color: rgba(128,128,128,.2);
+  cursor: not-allowed;
+  opacity: 0.6;
+  transform: none;
+  box-shadow: none;
+}
+.fd-btn-sm {
+  padding: 5px 12px !important;
+  font-size: 12px !important;
+  min-height: 28px;
+}
+.fd-group-size-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 12px;
+  min-height: 28px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 12px;
+  line-height: 1.2;
+  font-weight: 600;
+  color: #e8eaed;
+  border: 1px solid rgba(255,255,255,0.3);
+  box-sizing: border-box;
+  position: relative;
+  transition: all 0.2s ease;
+}
+.fd-group-size-badge:hover {
+  background: rgba(255,255,255,0.15);
+  border-color: rgba(255,255,255,0.5);
+}
+.fd-size-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 230px;
+  max-width: 340px;
+  background: rgba(28, 30, 34, 0.96);
+  color: #eee;
+  border: 1px solid rgba(128, 128, 128, 0.45);
+  border-radius: 8px;
+  padding: 8px 12px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(6px);
+  z-index: 50;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-4px);
+  transition: opacity 0.18s ease, transform 0.18s ease, visibility 0.18s ease;
+  pointer-events: none;
+  text-align: left;
+  font-weight: normal;
+  font-size: 11px;
+  line-height: 1.4;
+}
+.fd-group-size-badge:hover .fd-size-popover {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+.fd-size-popover-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 3px 0;
+  border-bottom: 1px solid rgba(128, 128, 128, 0.18);
+}
+.fd-size-popover-row:last-child {
+  border-bottom: none;
+}
+.fd-size-popover-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  opacity: 0.92;
+}
+.fd-size-popover-val {
+  font-weight: 600;
+  white-space: nowrap;
+  color: #5da9e9;
+}
 #fd-main .fd-progress-container { margin-top: 15px; height: 15px; background: rgba(128,128,128,.15); border-radius: 8px; overflow: hidden; display: none; }
 #fd-main .fd-progress-bar { height: 100%; background: rgba(90,160,90,.8); width: 0%; transition: width 1s linear; }
 #fd-main .fd-group { border: 1px solid rgba(128,128,128,.3); margin-bottom: 20px; padding: 15px; border-radius: 10px; background: rgba(128,128,128,.04); }
-#fd-main .fd-group h4 { margin-top: 0; }
+#fd-main .fd-group h4 { margin-top: 0; color: inherit; }
 #fd-main .fd-img-wrap { width: 150px; text-align: center; position: relative; }
 #fd-main .fd-img-wrap img { max-width: 100%; height: auto; border: 1px solid rgba(128,128,128,.4); border-radius: 6px; }
 #fd-main .fd-img-wrap .fd-img-info { font-size: 11px; margin-top: 5px; word-break: break-all; opacity: 0.8; }
@@ -113,9 +226,9 @@
 
 /* Tabs & Toggle */
 .fd-tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid rgba(128,128,128,.3); padding-bottom: 10px; }
-.fd-tab { padding: 10px 20px; cursor: pointer; border-radius: 6px; background: rgba(128,128,128,.1); border: 1px solid transparent; font-weight: bold; }
-.fd-tab.active { background: rgba(90,150,220,.2); border-color: rgba(90,150,220,.5); color: #fff; }
-.fd-tab:hover:not(.active) { background: rgba(128,128,128,.2); }
+.fd-tab { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; cursor: pointer; border-radius: 6px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.22); font-size: 13px; font-weight: 600; color: #d0d4d9; transition: all 0.2s ease; }
+.fd-tab.active { background: rgba(90,150,220,.22); border-color: rgba(90,150,220,.65); color: #66b8ff; }
+.fd-tab:hover:not(.active) { background: rgba(255,255,255,.14); border-color: rgba(255,255,255,.38); color: #fff; transform: translateY(-1px); }
 
 .fd-favorite-btn {
   background: rgba(255,193,7,0.1);
@@ -138,39 +251,114 @@
 .fd-favorite-btn:hover { background: rgba(255,193,7,0.4); box-shadow: 0 4px 12px rgba(255,193,7,0.4); transform: translateY(-2px); }
 
 .fd-favorite-all-btn {
-  background: rgba(255,193,7,0.1);
-  border: 1px solid rgba(255,193,7,0.5);
+  background: rgba(255,193,7,0.15);
+  border: 1px solid rgba(255,193,7,0.6);
   color: #ffc107;
-  cursor: pointer;
-  padding: 8px 16px;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: bold;
-  transition: all 0.2s ease;
-  vertical-align: middle;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
 }
-.fd-favorite-all-btn:hover { background: rgba(255,193,7,0.2); box-shadow: 0 4px 10px rgba(255,193,7,0.2); transform: translateY(-1px); }
+.fd-favorite-all-btn:hover {
+  background: rgba(255,193,7,0.28);
+  box-shadow: 0 2px 8px rgba(255,193,7,0.25);
+  transform: translateY(-1px);
+}
 
 .fd-sync-zoom-btn {
-  background: rgba(90,150,220,0.1);
-  border: 1px solid rgba(90,150,220,0.5);
-  color: inherit;
-  cursor: pointer;
-  padding: 8px 16px;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: bold;
-  transition: all 0.2s ease;
-  vertical-align: middle;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  background: rgba(90,150,220,0.16);
+  border: 1px solid rgba(90,150,220,0.6);
+  color: #66b8ff;
 }
 .fd-sync-zoom-btn.active {
   background: rgba(90,150,220,0.6);
+  color: #fff;
 }
-.fd-sync-zoom-btn:hover { background: rgba(90,150,220,0.3); box-shadow: 0 4px 10px rgba(90,150,220,0.2); transform: translateY(-1px); }
+.fd-sync-zoom-btn:hover {
+  background: rgba(90,150,220,0.28);
+  box-shadow: 0 2px 8px rgba(90,150,220,0.2);
+  transform: translateY(-1px);
+}
+
+/* Light theme high-contrast overrides */
+#fd-main.fd-theme-light .fd-group-size-badge {
+  color: #333333;
+  background: rgba(0, 0, 0, 0.06);
+  border-color: rgba(0, 0, 0, 0.28);
+}
+#fd-main.fd-theme-light .fd-group-size-badge:hover {
+  background: rgba(0, 0, 0, 0.12);
+  border-color: rgba(0, 0, 0, 0.45);
+}
+#fd-main.fd-theme-light .fd-favorite-all-btn,
+#fd-modal.fd-theme-light .fd-favorite-all-btn {
+  color: #946200;
+  background: rgba(255, 193, 7, 0.22);
+  border-color: rgba(200, 140, 0, 0.65);
+}
+#fd-main.fd-theme-light .fd-favorite-all-btn:hover,
+#fd-modal.fd-theme-light .fd-favorite-all-btn:hover {
+  background: rgba(255, 193, 7, 0.35);
+  border-color: rgba(180, 120, 0, 0.85);
+}
+#fd-main.fd-theme-light .fd-btn,
+#fd-main.fd-theme-light .fd-sync-zoom-btn,
+#fd-modal.fd-theme-light .fd-sync-zoom-btn {
+  color: #0d5aa7;
+  background: rgba(90, 150, 220, 0.16);
+  border-color: rgba(50, 120, 200, 0.55);
+}
+#fd-main.fd-theme-light .fd-btn:hover,
+#fd-main.fd-theme-light .fd-sync-zoom-btn:hover,
+#fd-modal.fd-theme-light .fd-sync-zoom-btn:hover,
+#fd-main.fd-theme-light .fd-group:hover:not(:has(.fd-group-fav-btn:hover)) .fd-open-group-btn {
+  background: rgba(90, 150, 220, 0.28);
+  border-color: rgba(30, 100, 185, 0.8);
+}
+#fd-main.fd-theme-light .fd-sync-zoom-btn.active,
+#fd-modal.fd-theme-light .fd-sync-zoom-btn.active {
+  color: #fff;
+  background: rgba(40, 115, 200, 0.85);
+}
+#fd-main.fd-theme-light .fd-tab {
+  color: #444444;
+  background: rgba(0, 0, 0, 0.05);
+  border-color: rgba(0, 0, 0, 0.22);
+}
+#fd-main.fd-theme-light .fd-tab:hover:not(.active) {
+  color: #111111;
+  background: rgba(0, 0, 0, 0.1);
+  border-color: rgba(0, 0, 0, 0.38);
+}
+#fd-main.fd-theme-light .fd-tab.active {
+  color: #0d5aa7;
+  background: rgba(90, 150, 220, 0.2);
+  border-color: rgba(50, 120, 200, 0.65);
+}
+#fd-modal.fd-theme-light {
+  background-color: rgba(0, 0, 0, 0.55);
+}
+#fd-modal.fd-theme-light #fd-modal-content {
+  background: #f8f9fa;
+  color: #222222;
+  border-color: rgba(0, 0, 0, 0.2);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
+}
+#fd-modal.fd-theme-light .fd-modal-img-wrap {
+  background: rgba(0, 0, 0, 0.03);
+  border-color: rgba(0, 0, 0, 0.15);
+}
+#fd-modal.fd-theme-light .fd-badge {
+  background: rgba(0, 0, 0, 0.06);
+  border-color: rgba(0, 0, 0, 0.18);
+  color: #333333;
+}
+#fd-modal.fd-theme-light .fd-badge.badge-gps {
+  color: #257925;
+  background: rgba(45, 145, 45, 0.12);
+  border-color: rgba(45, 145, 45, 0.4);
+}
+#fd-modal.fd-theme-light .fd-badge.badge-motion {
+  color: #16647a;
+  background: rgba(22, 100, 122, 0.12);
+  border-color: rgba(22, 100, 122, 0.38);
+}
 
 .fd-zoom-toggle-btn {
   position: absolute;
@@ -207,8 +395,9 @@
 .fd-search-bar input { padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(128,128,128,.4); background: rgba(128,128,128,.1); color: inherit; flex-grow: 1; max-width: 300px; }
 
 /* Toast Notification */
-.fd-toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 10000; display: flex; flex-direction: column; gap: 10px; }
-.fd-toast { background: rgba(40,167,69,.9); color: white; padding: 12px 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); font-weight: bold; font-size: 14px; opacity: 0; transform: translateY(20px); transition: opacity 0.3s ease, transform 0.3s ease; backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,.2); }
+.fd-toast-container { position: fixed; bottom: 16px; right: 16px; z-index: 10000; display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
+.fd-toast { background: rgba(40,167,69,.9); color: white; padding: 8px 12px; border-radius: 6px; box-shadow: 0 3px 10px rgba(0,0,0,0.25); font-weight: 500; font-size: 12px; line-height: 1.35; max-width: 320px; opacity: 0; transform: translateY(15px); transition: opacity 0.3s ease, transform 0.3s ease; backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,.2); }
+.fd-toast.fd-toast-fav { background: rgba(180,130,0,.92); border-color: rgba(255,193,7,.6); color: #fff; }
 .fd-toast.fd-toast-show { opacity: 1; transform: translateY(0); }
 
 /* Image Loader Spinner */
@@ -267,6 +456,45 @@
 
 <script type="text/javascript">
 (function(){
+  function applyFdTheme() {
+    var isDark = true;
+    var el = document.getElementById('fd-main') || document.body;
+    while (el && el !== document) {
+      var bg = window.getComputedStyle(el).backgroundColor;
+      if (bg && bg !== 'transparent' && bg !== 'rgba(0, 0, 0, 0)') {
+        var m = bg.match(/\d+(\.\d+)?/g);
+        if (m && m.length >= 3) {
+          var r = parseFloat(m[0]);
+          var g = parseFloat(m[1]);
+          var b = parseFloat(m[2]);
+          var a = m.length >= 4 ? parseFloat(m[3]) : 1;
+          if (a > 0.2) {
+            var lum = 0.299 * r + 0.587 * g + 0.114 * b;
+            isDark = lum < 140;
+            break;
+          }
+        }
+      }
+      el = el.parentNode;
+    }
+    var addCls = isDark ? 'fd-theme-dark' : 'fd-theme-light';
+    var remCls = isDark ? 'fd-theme-light' : 'fd-theme-dark';
+    var mainEl = document.getElementById('fd-main');
+    var modalEl = document.getElementById('fd-modal');
+    if (mainEl) {
+      mainEl.classList.remove(remCls);
+      mainEl.classList.add(addCls);
+    }
+    if (modalEl) {
+      modalEl.classList.remove(remCls);
+      modalEl.classList.add(addCls);
+    }
+  }
+  window.applyFdTheme = applyFdTheme;
+  applyFdTheme();
+  window.addEventListener('DOMContentLoaded', applyFdTheme);
+  window.addEventListener('load', applyFdTheme);
+
   var tabs = document.querySelectorAll('.fd-tab');
   tabs.forEach(function(tab) {
       tab.addEventListener('click', function() {
@@ -388,7 +616,7 @@ function scanChunk() {
 
     <label style="margin-left: auto; color: #ffc107;">
       <input type="checkbox" id="fd-show-hidden-chk" value="1" {if $FD_SHOW_HIDDEN}checked{/if} style="display:none;">
-      <span title="{'Show only hidden favorites'|translate}" style="font-size: 20px; cursor: pointer; text-shadow: 1px 1px 2px rgba(0,0,0,0.3); opacity: {if $FD_SHOW_HIDDEN}1{else}0.5{/if};">★</span>
+      <span title="{'Show only hidden favorites (groups where all photos are marked as favorite)'|translate}" style="font-size: 20px; cursor: pointer; text-shadow: 1px 1px 2px rgba(0,0,0,0.3); opacity: {if $FD_SHOW_HIDDEN}1{else}0.5{/if};">★</span>
     </label>
 
     <label>
@@ -510,12 +738,26 @@ function scanChunk() {
 
     <div class="fd-duplicates-list">
       {foreach from=$FD_DUPLICATES item=group}
-        <div class="fd-group" data-phash="{$group.PHASH|escape:'html'}" data-title="{$group.TITLE|escape:'html'}" data-images="{$group.IMAGES_JSON|escape:'html'}">
-          <h4>
-            {$group.TITLE} <span style="font-size: 11px; opacity: 0.6; font-weight: normal;">({if $FD_MODE == 'time'}{'Time range'|translate}{else}{'Hash:'|translate} {$group.PHASH}{/if})</span>
-            <button class="fd-btn" style="float: right; padding: 4px 10px; pointer-events: none;">{'Open group'|translate}</button>
-            <button type="button" class="fd-favorite-all-btn fd-group-fav-btn" data-target-status="{if $FD_SHOW_HIDDEN}0{else}1{/if}" title="{if $FD_SHOW_HIDDEN}{'☆ Unmark all'|translate}{else}{'★ Mark all'|translate}{/if}" style="float: right; margin-right: 10px; padding: 4px 10px; font-size: 12px;">{if $FD_SHOW_HIDDEN}{'☆ Unmark'|translate}{else}{'★ Favorite'|translate}{/if}</button>
-            <span style="float: right; margin-right: 15px; padding: 4px 10px; background: rgba(128,128,128,0.2); border-radius: 6px; font-size: 13px; font-weight: normal; border: 1px solid rgba(128,128,128,0.4);">{'Size:'|translate} {if $group.TOTAL_SIZE}{$group.TOTAL_SIZE}{else}{'No data'|translate}{/if}</span>
+        <div class="fd-group" data-phash="{$group.PHASH|escape:'html'}" data-title="{$group.TITLE|escape:'html'}" data-images="{$group.IMAGES|@json_encode|escape:'html'}">
+          <h4 style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 10px;">
+            <span>
+              {$group.TITLE} <span style="font-size: 11px; opacity: 0.6; font-weight: normal;">({if $FD_MODE == 'time'}{'Time range'|translate}{else}{'Hash:'|translate} {$group.PHASH}{/if})</span>
+            </span>
+            <span style="display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+              <span class="fd-group-size-badge">
+                <span class="fd-group-size-text">{'Size:'|translate} {if $group.TOTAL_SIZE}{$group.TOTAL_SIZE}{else}{'No data'|translate}{/if}</span>
+                <span class="fd-size-popover">
+                  {foreach from=$group.IMAGES item=img}
+                    <span class="fd-size-popover-row" data-id="{$img.ID}">
+                      <span class="fd-size-popover-name">📄 {$img.FILE|escape:'html'}</span>
+                      <span class="fd-size-popover-val">{if $img.FILE_SIZE}{$img.FILE_SIZE}{else}{'No data'|translate}{/if}</span>
+                    </span>
+                  {/foreach}
+                </span>
+              </span>
+              <button type="button" class="fd-favorite-all-btn fd-btn-sm fd-group-fav-btn" data-target-status="{if $FD_SHOW_HIDDEN}0{else}1{/if}" title="{if $FD_SHOW_HIDDEN}{'Unmark all photos in this group from favorites. The group will return to the main duplicates list.'|translate}{else}{'Mark all photos in this group as favorites. When all photos are favorites, the group will be hidden from the duplicates list (accessible via the ★ filter).'|translate}{/if}">{if $FD_SHOW_HIDDEN}{'☆ Unmark all (restore group)'|translate}{else}{'★ Mark all (hide group)'|translate}{/if}</button>
+              <button type="button" class="fd-btn fd-btn-sm fd-open-group-btn">{'Open group'|translate}</button>
+            </span>
           </h4>
           <div style="display: flex; gap: 15px; flex-wrap: wrap; pointer-events: none; opacity: 0.8; clear: both; padding-top: 10px;">
             {foreach from=$group.IMAGES item=img}
@@ -575,7 +817,7 @@ function scanChunk() {
 <div id="fd-modal">
   <div id="fd-modal-content">
     <span id="fd-modal-close">&times;</span>
-    <h3 id="fd-modal-title" style="margin-top: 0; border-bottom: 1px solid rgba(128,128,128,.3); padding-bottom: 10px;">{'Group'|translate}</h3>
+    <h3 id="fd-modal-title" style="margin-top: 0; border-bottom: 1px solid rgba(128,128,128,.3); padding-bottom: 12px; padding-right: 35px; display: flex; align-items: center; flex-wrap: wrap; gap: 10px;">{'Group'|translate}</h3>
     <div class="fd-modal-images" id="fd-modal-images">
       <!-- Images will be injected here via JS -->
     </div>
@@ -600,10 +842,10 @@ function scanChunk() {
   }
 
   // Toast Helper
-  function showToast(message) {
+  function showToast(message, variant) {
     var container = document.getElementById('fd-toast-container');
     var toast = document.createElement('div');
-    toast.className = 'fd-toast';
+    toast.className = 'fd-toast' + (variant === 'fav' ? ' fd-toast-fav' : '');
     toast.innerText = message;
     container.appendChild(toast);
 
@@ -621,6 +863,12 @@ function scanChunk() {
         if(toast.parentNode) toast.parentNode.removeChild(toast);
       }, 300);
     }, 4000);
+  }
+
+  function getFavoriteBtnTitle(isFav) {
+    return isFav
+      ? "{'Remove photo from favorites'|translate|escape:'javascript'}"
+      : "{'Add photo to favorites (marking all photos in the group will hide the group)'|translate|escape:'javascript'}";
   }
 
   function closeModal(onComplete) {
@@ -660,11 +908,18 @@ function scanChunk() {
     var shouldFadeOut = showHidden ? !allFavorites : allFavorites;
 
     if (shouldFadeOut) {
+      if (showHidden) {
+        showToast("{'Group removed from hidden favorites and restored to the main duplicates list.'|translate|escape:'javascript'}", 'fav');
+      } else {
+        showToast("{'All photos in the group are marked as favorites — the group has been hidden (available under the ★ filter).'|translate|escape:'javascript'}", 'fav');
+      }
       // Use setTimeout to allow the button to visually update before closing
       setTimeout(function() {
         fadeOutGroupAndCloseModal(groupEl);
       }, 150);
     }
+
+    return shouldFadeOut;
   }
 
   function updateGroupThumbnailStar(groupEl, imageId, isFav) {
@@ -784,40 +1039,42 @@ function scanChunk() {
     }
   });
 
-  function setZoomLensOpacity(lens, zoomToggle, visible) {
-    var opacityVal = visible ? '1' : '0';
-    if (isSyncZoomActive) {
-      document.querySelectorAll('#fd-modal-images .fd-zoom-lens').forEach(function(l) {
-        l.style.opacity = opacityVal;
-      });
-    } else if (!visible || zoomToggle.classList.contains('active')) {
-      lens.style.opacity = opacityVal;
-    }
+  if (typeof window.applyFdTheme === 'function') {
+    window.applyFdTheme();
   }
 
   function openModal(title, phash, images, groupEl) {
+    if (typeof window.applyFdTheme === 'function') {
+      window.applyFdTheme();
+    }
     isSyncZoomActive = false; // Reset on modal open
 
     var titleEl = document.getElementById('fd-modal-title');
     titleEl.innerHTML = ''; // wyczyszczenie
 
-    var titleText = document.createTextNode(title + ' ');
-    titleEl.appendChild(titleText);
+    var titleSpan = document.createElement('span');
+    titleSpan.textContent = title;
+    titleSpan.style.marginRight = '5px';
+    titleEl.appendChild(titleSpan);
 
     var showHiddenChk = document.getElementById('fd-show-hidden-chk');
     var showHidden = showHiddenChk ? showHiddenChk.checked : false;
     var modalTargetStatus = showHidden ? 0 : 1;
 
     var favAllBtn = document.createElement('button');
+    favAllBtn.type = 'button';
     favAllBtn.className = 'fd-favorite-all-btn';
-    favAllBtn.innerHTML = showHidden ? "{'☆ Unmark all'|translate|escape:'javascript'}" : "{'★ Mark all'|translate|escape:'javascript'}";
-    favAllBtn.style.marginLeft = '15px';
+    favAllBtn.innerHTML = showHidden ? "{'☆ Unmark all (restore group)'|translate|escape:'javascript'}" : "{'★ Mark all (hide group)'|translate|escape:'javascript'}";
+    favAllBtn.title = showHidden
+      ? "{'Unmark all photos in this group from favorites. The group will return to the main duplicates list.'|translate|escape:'javascript'}"
+      : "{'Mark all photos in this group as favorites. When all photos are favorites, the group will be hidden from the duplicates list (accessible via the ★ filter).'|translate|escape:'javascript'}";
     favAllBtn.onclick = function() {
       setGroupFavorite(groupEl, modalTargetStatus, favAllBtn, function(updatedImages, newFav) {
         var buttons = document.getElementById('fd-modal-images').querySelectorAll('.fd-favorite-btn');
         buttons.forEach(function(btn) {
           btn.className = 'fd-favorite-btn ' + (newFav ? 'active' : '');
           btn.innerHTML = newFav ? '★' : '☆';
+          btn.title = getFavoriteBtnTitle(newFav === 1);
         });
         images.forEach(function(img) {
           img.IS_FAVORITE = newFav;
@@ -827,10 +1084,10 @@ function scanChunk() {
     titleEl.appendChild(favAllBtn);
 
     var syncZoomBtn = document.createElement('button');
+    syncZoomBtn.type = 'button';
     syncZoomBtn.className = 'fd-sync-zoom-btn';
     syncZoomBtn.innerHTML = '🔍🔍';
     syncZoomBtn.title = "{'Toggle synchronized magnifier'|translate|escape:'javascript'}";
-    syncZoomBtn.style.marginLeft = '10px';
     syncZoomBtn.onclick = function() {
       isSyncZoomActive = !isSyncZoomActive;
       if (isSyncZoomActive) {
@@ -909,7 +1166,7 @@ function scanChunk() {
       var isFav = img.IS_FAVORITE == 1;
       favBtn.className = 'fd-favorite-btn ' + (isFav ? 'active' : '');
       favBtn.innerHTML = isFav ? '★' : '☆';
-      favBtn.title = "{'Mark/unmark as favorite'|translate|escape:'javascript'}";
+      favBtn.title = getFavoriteBtnTitle(isFav);
       favBtn.style.margin = '0';
       // Prevent link click when clicking button
       favBtn.onclick = function(e) {
@@ -1089,6 +1346,7 @@ function scanChunk() {
 
           btnEl.className = 'fd-favorite-btn ' + (isFav ? 'active' : '');
           btnEl.innerHTML = isFav ? '★' : '☆';
+          btnEl.title = getFavoriteBtnTitle(isFav);
           updateGroupThumbnailStar(groupEl, imageId, isFav);
 
           // Update JSON data on the group DOM element
@@ -1103,7 +1361,16 @@ function scanChunk() {
             });
             groupEl.setAttribute('data-images', JSON.stringify(updatedImages));
 
-            checkGroupStatusAndClose(updatedImages, groupEl);
+            var groupFadedOut = checkGroupStatusAndClose(updatedImages, groupEl);
+            if (!groupFadedOut) {
+              if (isFav) {
+                var favCount = updatedImages.filter(function(item) { return item.IS_FAVORITE == 1; }).length;
+                var addedMsg = "{'Photo added to favorites (%s/%s). Mark all photos in the group to hide it.'|translate|escape:'javascript'}";
+                showToast(addedMsg.replace('%s', favCount).replace('%s', updatedImages.length), 'fav');
+              } else {
+                showToast("{'Photo removed from favorites.'|translate|escape:'javascript'}", 'fav');
+              }
+            }
           }
         } else {
           var errorLabel = "{'Error:'|translate|escape:'javascript'}";
@@ -1169,6 +1436,17 @@ function scanChunk() {
               var mainListImgWrap = groupEl.querySelector('.fd-img-wrap[data-id="' + imageId + '"]');
               if (mainListImgWrap) {
                 mainListImgWrap.style.display = 'none';
+              }
+
+              // Update size popover and total size badge on the group card
+              var popoverRow = groupEl.querySelector('.fd-size-popover-row[data-id="' + imageId + '"]');
+              if (popoverRow && popoverRow.parentNode) {
+                popoverRow.parentNode.removeChild(popoverRow);
+              }
+              var sizeTextEl = groupEl.querySelector('.fd-group-size-text');
+              if (sizeTextEl) {
+                var newTotalBytes = updatedImages.reduce(function(sum, item) { return sum + (parseInt(item.FILE_SIZE_BYTES, 10) || 0); }, 0);
+                sizeTextEl.innerText = "{'Size:'|translate|escape:'javascript'} " + formatBytes(newTotalBytes);
               }
 
               // If only 1 image left, close modal then fade out group
