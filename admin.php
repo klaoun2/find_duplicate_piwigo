@@ -6,11 +6,53 @@ global $template, $page;
 include_once(PHPWG_ROOT_PATH . 'admin/include/functions.php');
 include_once(FIND_DUPLICATES_PATH . 'main.inc.php');
 
+// Verify table existence early (in case plugin is accessed while uninstalled)
+$table_check = pwg_query("SHOW TABLES LIKE '" . FIND_DUPLICATES_TABLE . "'");
+if (!pwg_db_fetch_assoc($table_check)) {
+  $page['errors'][] = l10n('An error occurred.');
+  return;
+}
+
 // Safe check for development - ensure is_favorite column exists
-$safe_check_query = "SHOW COLUMNS FROM " . FIND_DUPLICATES_TABLE . " LIKE 'is_favorite'";
-$safe_check_result = pwg_query($safe_check_query);
-if (!pwg_db_fetch_assoc($safe_check_result)) {
-  pwg_query("ALTER TABLE " . FIND_DUPLICATES_TABLE . " ADD COLUMN `is_favorite` tinyint(1) NOT NULL DEFAULT 0");
+find_duplicates_ensure_favorite_column();
+
+// Helper: fetch scan progress counts (total, hashed, failed)
+function find_duplicates_get_scan_stats() {
+  $total_query = 'SELECT COUNT(id) AS c FROM ' . IMAGES_TABLE;
+  $total_row = pwg_db_fetch_assoc(pwg_query($total_query));
+  $total_images = (int)$total_row['c'];
+
+  $hashed_query = '
+    SELECT COUNT(h.image_id) AS c
+    FROM ' . FIND_DUPLICATES_TABLE . ' h
+    INNER JOIN ' . IMAGES_TABLE . ' i ON h.image_id = i.id
+    WHERE h.phash IS NOT NULL AND h.phash != \'failed\'';
+  $hashed_row = pwg_db_fetch_assoc(pwg_query($hashed_query));
+  $hashed_images = (int)$hashed_row['c'];
+
+  $failed_query = '
+    SELECT COUNT(h.image_id) AS c
+    FROM ' . FIND_DUPLICATES_TABLE . ' h
+    INNER JOIN ' . IMAGES_TABLE . ' i ON h.image_id = i.id
+    WHERE h.phash = \'failed\'';
+  $failed_row = pwg_db_fetch_assoc(pwg_query($failed_query));
+  $failed_images = (int)$failed_row['c'];
+
+  return array(
+    'total' => $total_images,
+    'hashed' => $hashed_images,
+    'failed' => $failed_images,
+  );
+}
+
+// Helper: format bytes
+function find_duplicates_format_bytes($bytes) {
+  if ($bytes >= 1048576) {
+    return number_format($bytes / 1048576, 2) . ' MB';
+  } elseif ($bytes >= 1024) {
+    return number_format($bytes / 1024, 2) . ' KB';
+  }
+  return $bytes . ' B';
 }
 
 // Handle AJAX scan request
@@ -82,25 +124,10 @@ if (isset($_GET['action']) && $_GET['action'] == 'scan')
   }
   
   // Get counts to return progress
-  $total_query = 'SELECT COUNT(id) AS c FROM ' . IMAGES_TABLE;
-  $total_row = pwg_db_fetch_assoc(pwg_query($total_query));
-  $total_images = (int)$total_row['c'];
-  
-  $hashed_query = '
-    SELECT COUNT(h.image_id) AS c
-    FROM ' . FIND_DUPLICATES_TABLE . ' h
-    INNER JOIN ' . IMAGES_TABLE . ' i ON h.image_id = i.id
-    WHERE h.phash IS NOT NULL AND h.phash != \'failed\'';
-  $hashed_row = pwg_db_fetch_assoc(pwg_query($hashed_query));
-  $hashed_images = (int)$hashed_row['c'];
-  
-  $failed_query = '
-    SELECT COUNT(h.image_id) AS c
-    FROM ' . FIND_DUPLICATES_TABLE . ' h
-    INNER JOIN ' . IMAGES_TABLE . ' i ON h.image_id = i.id
-    WHERE h.phash = \'failed\'';
-  $failed_row = pwg_db_fetch_assoc(pwg_query($failed_query));
-  $failed_images = (int)$failed_row['c'];
+  $scan_stats = find_duplicates_get_scan_stats();
+  $total_images = $scan_stats['total'];
+  $hashed_images = $scan_stats['hashed'];
+  $failed_images = $scan_stats['failed'];
 
   echo json_encode(array(
     'processed_in_chunk' => $processed,
@@ -121,16 +148,6 @@ if (isset($_GET['action']) && $_GET['action'] == 'retry_failed') {
 
   echo json_encode(array('status' => 'ok'));
   die();
-}
-
-// Helper: format bytes
-function find_duplicates_format_bytes($bytes) {
-  if ($bytes >= 1048576) {
-    return number_format($bytes / 1048576, 2) . ' MB';
-  } elseif ($bytes >= 1024) {
-    return number_format($bytes / 1024, 2) . ' KB';
-  }
-  return $bytes . ' B';
 }
 
 // Handle AJAX image deletion
@@ -156,7 +173,6 @@ if (isset($_GET['action']) && $_GET['action'] == 'delete_image') {
   }
 
   // Usunięcie zdjęcia korzystając z funkcji Piwigo
-  include_once(PHPWG_ROOT_PATH . 'admin/include/functions.php');
   if (function_exists('delete_elements')) {
     delete_elements(array($image_id), true); // true = delete file from disk too
   } else {
@@ -174,15 +190,8 @@ if (isset($_GET['action']) && $_GET['action'] == 'delete_image') {
     conf_update_param('find_duplicates_saved_space', $saved_space);
   }
 
-  $cache_dir = PHPWG_ROOT_PATH . '_data/find_duplicates_cache';
-  
   // Delete action must also use wildcard to clean cache if exact match fails
-  $files = glob($cache_dir . '/*.json');
-  if ($files) {
-    foreach ($files as $file) {
-      @unlink($file);
-    }
-  }
+  find_duplicates_clear_cache();
 
   echo json_encode(array(
     'status' => 'ok',
@@ -262,58 +271,50 @@ function find_duplicates_hamming_distance($hash1, $hash2) {
 // User Settings
 global $conf;
 
-// Determine if we need to save new settings
-if (isset($_GET['similarity']) || isset($_GET['fd_mode'])) {
-  // Read similarity
-  $similarity_limit = isset($_GET['similarity']) ? (int)$_GET['similarity'] : (isset($conf['find_duplicates_similarity']) ? (int)$conf['find_duplicates_similarity'] : 100);
-  if ($similarity_limit < 80) $similarity_limit = 80;
-  if ($similarity_limit > 100) $similarity_limit = 100;
+$should_save_settings = (isset($_GET['similarity']) || isset($_GET['fd_mode']));
 
-  // Read same_album
-  $same_album = isset($_GET['same_album']) ? ($_GET['same_album'] == '1' ? 1 : 0) : (isset($conf['find_duplicates_same_album']) ? (int)$conf['find_duplicates_same_album'] : 0);
-  
-  // Read fd_mode
-  $fd_mode = isset($_GET['fd_mode']) ? $_GET['fd_mode'] : (isset($conf['find_duplicates_mode']) ? $conf['find_duplicates_mode'] : 'visual');
-  if (!in_array($fd_mode, array('visual', 'time'))) $fd_mode = 'visual';
-  
-  $fd_show_hidden = (isset($_GET['fd_show_hidden']) && $_GET['fd_show_hidden'] == '1') ? 1 : 0;
+// Read similarity
+$similarity_limit = isset($_GET['similarity'])
+  ? (int)$_GET['similarity']
+  : (isset($conf['find_duplicates_similarity']) ? (int)$conf['find_duplicates_similarity'] : 100);
+if ($similarity_limit < 80) $similarity_limit = 80;
+if ($similarity_limit > 100) $similarity_limit = 100;
 
-  $fd_time_interval = isset($_GET['fd_time_interval']) ? (int)$_GET['fd_time_interval'] : (isset($conf['find_duplicates_time_interval']) ? (int)$conf['find_duplicates_time_interval'] : 15);
-  $fd_search_group = isset($_GET['fd_search_group']) ? $_GET['fd_search_group'] : '';
+// Read same_album
+$same_album = isset($_GET['same_album'])
+  ? ($_GET['same_album'] == '1' ? 1 : 0)
+  : (isset($conf['find_duplicates_same_album']) ? (int)$conf['find_duplicates_same_album'] : 0);
 
-  $fd_filter_album = isset($_GET['fd_filter_album']) ? (int)$_GET['fd_filter_album'] : (isset($conf['find_duplicates_filter_album']) ? (int)$conf['find_duplicates_filter_album'] : 0);
+// Read fd_mode
+$fd_mode = isset($_GET['fd_mode'])
+  ? $_GET['fd_mode']
+  : (isset($conf['find_duplicates_mode']) ? $conf['find_duplicates_mode'] : 'visual');
+if (!in_array($fd_mode, array('visual', 'time'))) $fd_mode = 'visual';
 
-  // Save to db
+$fd_show_hidden = (isset($_GET['fd_show_hidden']) && $_GET['fd_show_hidden'] == '1') ? 1 : 0;
+
+$fd_time_interval = isset($_GET['fd_time_interval'])
+  ? (int)$_GET['fd_time_interval']
+  : (isset($conf['find_duplicates_time_interval']) ? (int)$conf['find_duplicates_time_interval'] : 15);
+$fd_search_group = isset($_GET['fd_search_group']) ? $_GET['fd_search_group'] : '';
+
+$fd_filter_album = isset($_GET['fd_filter_album'])
+  ? (int)$_GET['fd_filter_album']
+  : (isset($conf['find_duplicates_filter_album']) ? (int)$conf['find_duplicates_filter_album'] : 0);
+
+// Save to db and update current config when settings are submitted
+if ($should_save_settings) {
   conf_update_param('find_duplicates_similarity', $similarity_limit);
   conf_update_param('find_duplicates_same_album', $same_album);
   conf_update_param('find_duplicates_mode', $fd_mode);
   conf_update_param('find_duplicates_filter_album', $fd_filter_album);
   conf_update_param('find_duplicates_time_interval', $fd_time_interval);
 
-  // Update current config
   $conf['find_duplicates_similarity'] = $similarity_limit;
   $conf['find_duplicates_same_album'] = $same_album;
   $conf['find_duplicates_mode'] = $fd_mode;
   $conf['find_duplicates_filter_album'] = $fd_filter_album;
   $conf['find_duplicates_time_interval'] = $fd_time_interval;
-} else {
-  // Read from db or use defaults
-  $similarity_limit = isset($conf['find_duplicates_similarity']) ? (int)$conf['find_duplicates_similarity'] : 100;
-  $same_album = isset($conf['find_duplicates_same_album']) ? (int)$conf['find_duplicates_same_album'] : 0;
-
-  // If explicitly overridden via URL, honor it temporarily without saving to conf for this view
-  if (isset($_GET['same_album'])) {
-      $same_album = $_GET['same_album'] == '1' ? 1 : 0;
-  }
-  
-  $fd_mode = isset($conf['find_duplicates_mode']) ? $conf['find_duplicates_mode'] : 'visual';
-  if (!in_array($fd_mode, array('visual', 'time'))) $fd_mode = 'visual';
-
-  $fd_show_hidden = (isset($_GET['fd_show_hidden']) && $_GET['fd_show_hidden'] == '1') ? 1 : 0;
-  
-  $fd_time_interval = isset($conf['find_duplicates_time_interval']) ? (int)$conf['find_duplicates_time_interval'] : 15;
-  $fd_search_group = isset($_GET['fd_search_group']) ? $_GET['fd_search_group'] : '';
-  $fd_filter_album = isset($conf['find_duplicates_filter_album']) ? (int)$conf['find_duplicates_filter_album'] : 0;
 }
 
 // User Settings for Pagination
@@ -327,41 +328,28 @@ $categories = array();
 $query = 'SELECT id, name, uppercats, global_rank FROM ' . CATEGORIES_TABLE . ' ORDER BY global_rank ASC';
 $result = pwg_query($query);
 while ($row = pwg_db_fetch_assoc($result)) {
-  $depth = substr_count($row['uppercats'], ',');
+  $uppercats_str = (string)$row['uppercats'];
+  $cat_name_str = (string)$row['name'];
+  $depth = substr_count($uppercats_str, ',');
   $indent = str_repeat('&nbsp;&nbsp;&nbsp;', $depth);
   if ($depth > 0) $indent .= '- ';
 
   $categories[] = array(
     'id' => $row['id'],
-    'name' => $row['name'],
-    'uppercats' => $row['uppercats'],
-    'uppercats_arr' => explode(',', $row['uppercats']),
-    'display_name' => $indent . htmlspecialchars($row['name'])
+    'name' => $cat_name_str,
+    'uppercats' => $uppercats_str,
+    'uppercats_arr' => explode(',', $uppercats_str),
+    'display_name' => $indent . htmlspecialchars($cat_name_str)
   );
 }
 
 // ---------------------------------------------------------
 // Default Page View Data
 // ---------------------------------------------------------
-$total_query = 'SELECT COUNT(id) AS c FROM ' . IMAGES_TABLE;
-$total_row = pwg_db_fetch_assoc(pwg_query($total_query));
-$total_images = (int)$total_row['c'];
-
-$hashed_query = '
-  SELECT COUNT(h.image_id) AS c
-  FROM ' . FIND_DUPLICATES_TABLE . ' h
-  INNER JOIN ' . IMAGES_TABLE . ' i ON h.image_id = i.id
-  WHERE h.phash IS NOT NULL AND h.phash != \'failed\'';
-$hashed_row = pwg_db_fetch_assoc(pwg_query($hashed_query));
-$hashed_images = (int)$hashed_row['c'];
-
-$failed_query = '
-  SELECT COUNT(h.image_id) AS c
-  FROM ' . FIND_DUPLICATES_TABLE . ' h
-  INNER JOIN ' . IMAGES_TABLE . ' i ON h.image_id = i.id
-  WHERE h.phash = \'failed\'';
-$failed_row = pwg_db_fetch_assoc(pwg_query($failed_query));
-$failed_images = (int)$failed_row['c'];
+$scan_stats = find_duplicates_get_scan_stats();
+$total_images = $scan_stats['total'];
+$hashed_images = $scan_stats['hashed'];
+$failed_images = $scan_stats['failed'];
 
 // Find Duplicates
 $duplicates = array();
@@ -423,7 +411,7 @@ if ($can_show_duplicates)
       if (!isset($images_data[$img_id])) {
         // Check for Motion Picture based on Google Pixel convention (.MP in filename before extension or at the end of the base name)
         $has_motion = 0;
-        if (stripos($row['file'], '.MP') !== false || stripos($row['name'], '.MP') !== false) {
+        if (stripos((string)$row['file'], '.MP') !== false || stripos((string)$row['name'], '.MP') !== false) {
             $has_motion = 1;
         }
 
@@ -560,13 +548,7 @@ if ($can_show_duplicates)
           $bytes = 0;
           if (file_exists($file_path_abs)) {
             $bytes = filesize($file_path_abs);
-            if ($bytes >= 1048576) {
-              $filesize_str = number_format($bytes / 1048576, 2) . ' MB';
-            } elseif ($bytes >= 1024) {
-              $filesize_str = number_format($bytes / 1024, 2) . ' KB';
-            } else {
-              $filesize_str = $bytes . ' B';
-            }
+            $filesize_str = find_duplicates_format_bytes($bytes);
           }
           $images_data[$id]['FILE_SIZE'] = $filesize_str;
           $images_data[$id]['FILE_SIZE_BYTES'] = $bytes;
@@ -629,10 +611,7 @@ if ($can_show_duplicates)
     }
     
     // Save to cache, clear old cache files
-    $files = glob($cache_dir . '/*.json');
-    foreach ($files as $file) {
-      @unlink($file); // clean up any old cache files to avoid space bloating
-    }
+    find_duplicates_clear_cache();
     @file_put_contents($cache_filename, json_encode($duplicates));
   }
 }
@@ -718,8 +697,8 @@ foreach ($duplicates as $group) {
   }
 
   // Filter by group name if search query is provided
-  $album_name = $group['BASE_ALBUM_NAME'];
-  if (!empty($fd_search_group) && stripos($album_name, $fd_search_group) === false) {
+  $album_name = (string)$group['BASE_ALBUM_NAME'];
+  if (!empty($fd_search_group) && stripos($album_name, (string)$fd_search_group) === false) {
     continue;
   }
   
@@ -737,7 +716,8 @@ foreach ($duplicates as $group) {
     'TOTAL_SIZE' => isset($group['TOTAL_SIZE']) ? $group['TOTAL_SIZE'] : l10n('No data'),
     'TOTAL_SIZE_BYTES' => isset($group['TOTAL_SIZE_BYTES']) ? $group['TOTAL_SIZE_BYTES'] : 0,
     'OLDEST_DATE_TS' => isset($group['OLDEST_DATE_TS']) ? $group['OLDEST_DATE_TS'] : null,
-    'IMAGES' => $group_images_updated
+    'IMAGES' => $group_images_updated,
+    'IMAGES_JSON' => json_encode($group_images_updated)
   );
   
   $total_images_in_groups += count($group_images_updated);
@@ -818,7 +798,7 @@ $template->assign(array(
   'FD_SHOW_HIDDEN' => $fd_show_hidden,
   'FD_TIME_INTERVAL' => $fd_time_interval,
   'FD_SEARCH_GROUP' => $fd_search_group,
-  'FD_TOTAL_SAVED_SPACE' => isset($saved_space_formatted) ? $saved_space_formatted : find_duplicates_format_bytes(isset($conf['find_duplicates_saved_space']) ? (int)$conf['find_duplicates_saved_space'] : 0),
+  'FD_TOTAL_SAVED_SPACE' => find_duplicates_format_bytes(isset($conf['find_duplicates_saved_space']) ? (int)$conf['find_duplicates_saved_space'] : 0),
   'FD_SORT' => htmlspecialchars($sort_opt),
   'FD_CATEGORIES' => $categories,
   'FD_FILTER_ALBUM' => $fd_filter_album,

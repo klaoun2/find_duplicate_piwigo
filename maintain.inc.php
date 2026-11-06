@@ -27,6 +27,11 @@ CREATE TABLE IF NOT EXISTS `' . $this->table . '` (
 
   private function upgrade_table()
   {
+    if (function_exists('find_duplicates_ensure_favorite_column')) {
+      find_duplicates_ensure_favorite_column($this->table);
+      return;
+    }
+
     $query = "SHOW COLUMNS FROM `" . $this->table . "` LIKE 'is_favorite'";
     $result = pwg_query($query);
     if (!pwg_db_fetch_assoc($result)) {
@@ -70,5 +75,25 @@ CREATE TABLE IF NOT EXISTS `' . $this->table . '` (
     pwg_query('DROP TABLE IF EXISTS `' . $this->table . '`;');
     conf_delete_param('find_duplicates_similarity');
     conf_delete_param('find_duplicates_same_album');
+    conf_delete_param('find_duplicates_mode');
+    conf_delete_param('find_duplicates_filter_album');
+    conf_delete_param('find_duplicates_time_interval');
+    // Note: find_duplicates_saved_space is intentionally preserved
+
+    if (function_exists('find_duplicates_clear_cache')) {
+      find_duplicates_clear_cache(true);
+      return;
+    }
+
+    $cache_dir = PHPWG_ROOT_PATH . '_data/find_duplicates_cache';
+    if (is_dir($cache_dir)) {
+      $files = glob($cache_dir . '/*.json');
+      if (is_array($files)) {
+        foreach ($files as $file) {
+          @unlink($file);
+        }
+      }
+      @rmdir($cache_dir);
+    }
   }
 }

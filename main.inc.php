@@ -1,7 +1,7 @@
 <?php
 /*
 Plugin Name: Find Duplicates
-Version: 1.1.7
+Version: 1.1.8
 Description: Tool for finding duplicate and similar images (pHash/dHash/time).
 Plugin URI: http://piwigo.org/ext/extension_view.php?eid=1123
 Author: Oban
@@ -13,7 +13,7 @@ defined('PHPWG_ROOT_PATH') or die('Hacking attempt!');
 define('FIND_DUPLICATES_ID', basename(dirname(__FILE__)));
 define('FIND_DUPLICATES_PATH', PHPWG_PLUGINS_PATH . FIND_DUPLICATES_ID . '/');
 define('FIND_DUPLICATES_ADMIN', get_root_url() . 'admin.php?page=plugin-' . FIND_DUPLICATES_ID);
-define('FIND_DUPLICATES_VERSION', '1.1.7');
+define('FIND_DUPLICATES_VERSION', '1.1.8');
 
 global $prefixeTable;
 define('FIND_DUPLICATES_TABLE', $prefixeTable . 'find_duplicates_hashes');
@@ -132,16 +132,49 @@ function find_duplicates_set_group_favorite($raw_ids, $target_status = 1)
   foreach ($valid_ids as $id) {
     $values[] = '(' . (int)$id . ', ' . (int)$target_status . ')';
     if (count($values) >= $batch_size) {
-      pwg_query('INSERT INTO ' . FIND_DUPLICATES_TABLE . ' (image_id, is_favorite) VALUES ' . implode(', ', $values) . ' ON DUPLICATE KEY UPDATE is_favorite = VALUES(is_favorite)');
+      pwg_query('INSERT INTO ' . FIND_DUPLICATES_TABLE . ' (image_id, is_favorite) VALUES ' . implode(', ', $values) . ' ON DUPLICATE KEY UPDATE is_favorite = ' . (int)$target_status);
       $values = array();
     }
   }
 
   if (!empty($values)) {
-    pwg_query('INSERT INTO ' . FIND_DUPLICATES_TABLE . ' (image_id, is_favorite) VALUES ' . implode(', ', $values) . ' ON DUPLICATE KEY UPDATE is_favorite = VALUES(is_favorite)');
+    pwg_query('INSERT INTO ' . FIND_DUPLICATES_TABLE . ' (image_id, is_favorite) VALUES ' . implode(', ', $values) . ' ON DUPLICATE KEY UPDATE is_favorite = ' . (int)$target_status);
   }
 
   return array_values($valid_ids);
+}
+
+// Clear JSON cache files in _data/find_duplicates_cache
+function find_duplicates_clear_cache($remove_dir = false)
+{
+  $cache_dir = PHPWG_ROOT_PATH . '_data/find_duplicates_cache';
+  if (!is_dir($cache_dir)) {
+    return;
+  }
+
+  $files = glob($cache_dir . '/*.json');
+  if (is_array($files)) {
+    foreach ($files as $file) {
+      @unlink($file);
+    }
+  }
+
+  if ($remove_dir) {
+    @rmdir($cache_dir);
+  }
+}
+
+// Ensure the is_favorite column exists on the plugin hashes table
+function find_duplicates_ensure_favorite_column($table_name = null)
+{
+  if ($table_name === null) {
+    $table_name = FIND_DUPLICATES_TABLE;
+  }
+  $result = pwg_query("SHOW COLUMNS FROM `" . $table_name . "` LIKE 'is_favorite'");
+  if (!pwg_db_fetch_assoc($result)) {
+    pwg_query("ALTER TABLE `" . $table_name . "` ADD COLUMN `is_favorite` tinyint(1) NOT NULL DEFAULT 0");
+  }
+
 }
 
 
