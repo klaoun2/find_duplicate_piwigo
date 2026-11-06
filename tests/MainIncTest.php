@@ -69,4 +69,29 @@ class MainIncTest extends TestCase
         $this->assertEmpty($updated);
         $this->assertEmpty(get_captured_queries());
     }
+
+    public function testEnsureFavoriteColumnAddsColumnWhenMissing()
+    {
+        global $mock_fetch_assoc_result;
+        $mock_fetch_assoc_result = false;
+
+        find_duplicates_ensure_favorite_column();
+
+        $queries = get_captured_queries();
+        $this->assertCount(2, $queries);
+        $this->assertSame("SHOW COLUMNS FROM `piwigo_find_duplicates_hashes` LIKE 'is_favorite'", $queries[0]);
+        $this->assertSame("ALTER TABLE `piwigo_find_duplicates_hashes` ADD COLUMN `is_favorite` tinyint(1) NOT NULL DEFAULT 0", $queries[1]);
+    }
+
+    public function testEnsureFavoriteColumnSkipsAlterWhenPresent()
+    {
+        global $mock_fetch_assoc_result;
+        $mock_fetch_assoc_result = ['Field' => 'is_favorite'];
+
+        find_duplicates_ensure_favorite_column();
+
+        $queries = get_captured_queries();
+        $this->assertCount(1, $queries);
+        $this->assertSame("SHOW COLUMNS FROM `piwigo_find_duplicates_hashes` LIKE 'is_favorite'", $queries[0]);
+    }
 }
