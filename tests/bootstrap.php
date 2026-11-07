@@ -4,6 +4,7 @@ define('PHPWG_ROOT_PATH', __DIR__ . '/../');
 define('PHPWG_PLUGINS_PATH', PHPWG_ROOT_PATH . 'plugins/');
 
 // Dummy function to replace core function
+if (!function_exists('l10n')) { function l10n($str) { return $str; } }
 function get_root_url() {
     return '/';
 }

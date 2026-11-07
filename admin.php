@@ -78,7 +78,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'scan')
   {
     $hash = 'failed';
 
-    // Zoptymalizowane generowanie hashu na podstawie miniatury (zamiast powolnego pliku oryginalnego)
+    // Optimized hash generation using thumbnail derivative (instead of slow original file)
     $thumb_path = '';
     if (class_exists('SrcImage') && class_exists('DerivativeImage') && class_exists('ImageStdParams')) {
       try {
@@ -94,7 +94,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'scan')
           $thumb_path = $thumb_path_abs;
         }
       } catch (Throwable $e) {
-        // Ignoruj błędy z klasami miniatur
+        // Ignore derivative generation errors
       }
     }
 
@@ -161,7 +161,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'delete_image') {
 
   $image_id = (int)$_GET['image_id'];
 
-  // Zapisanie rozmiaru pliku przed usunięciem
+  // Record file size before deletion
   $file_size = 0;
   $query = 'SELECT path FROM ' . IMAGES_TABLE . ' WHERE id = ' . $image_id;
   $result = pwg_query($query);
@@ -172,7 +172,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'delete_image') {
     }
   }
 
-  // Usunięcie zdjęcia korzystając z funkcji Piwigo
+  // Delete image using Piwigo core function
   if (function_exists('delete_elements')) {
     delete_elements(array($image_id), true); // true = delete file from disk too
   } else {
@@ -181,7 +181,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'delete_image') {
     pwg_query('DELETE FROM ' . FIND_DUPLICATES_TABLE . ' WHERE image_id = ' . $image_id);
   }
 
-  // Odświeżenie Cache w locie i zapisanie zaoszczędzonego miejsca
+  // Invalidate cache and update saved space counter
   global $conf;
 
   $saved_space = isset($conf['find_duplicates_saved_space']) ? (int)$conf['find_duplicates_saved_space'] : 0;
@@ -409,11 +409,8 @@ if ($can_show_duplicates)
     {
       $img_id = $row['id'];
       if (!isset($images_data[$img_id])) {
-        // Check for Motion Picture based on Google Pixel convention (.MP in filename before extension or at the end of the base name)
-        $has_motion = 0;
-        if (stripos((string)$row['file'], '.MP') !== false || stripos((string)$row['name'], '.MP') !== false) {
-            $has_motion = 1;
-        }
+        // Check for Motion Picture based on common vendor conventions (Pixel .MP, Samsung MotionPhoto, MVIMG, etc.)
+        $has_motion = find_duplicates_is_motion_photo($row['file'], $row['name']);
 
         // Generate proper web URLs to prevent "file:///" errors in browsers
         $full_url = get_root_url() . $row['path'];
@@ -572,7 +569,7 @@ if ($can_show_duplicates)
           $lead_hash = $images_data[$id]['PHASH'];
         }
 
-        // Zliczanie albumów
+        // Count album occurrences in the group
         if (!empty($img_data['ALBUMS'])) {
           foreach ($img_data['ALBUMS'] as $album_id => $a_name) {
             if (!isset($album_counts_for_group[$album_id])) {
@@ -586,7 +583,7 @@ if ($can_show_duplicates)
 
       $album_name = l10n('Unknown album');
       if (!empty($album_counts_for_group)) {
-        // Znajdź album z największą liczbą zdjęć (w razie remisu - pierwszy znaleziony z maksimum)
+        // Find album with the most photos (or first maximum on tie)
         $max_count = -1;
         $best_album_id = null;
         foreach ($album_counts_for_group as $album_id => $count) {
