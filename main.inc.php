@@ -104,9 +104,19 @@ function find_duplicates_on_delete($ids)
 {
   if (empty($ids)) return;
 
+  $clean_ids = array();
+  foreach ((array)$ids as $id) {
+    $int_id = (int)$id;
+    if ($int_id > 0) {
+      $clean_ids[$int_id] = $int_id;
+    }
+  }
+
+  if (empty($clean_ids)) return;
+
   $query = '
     DELETE FROM ' . FIND_DUPLICATES_TABLE . '
-    WHERE image_id IN (' . implode(',', $ids) . ')';
+    WHERE image_id IN (' . implode(',', $clean_ids) . ')';
   pwg_query($query);
 }
 

@@ -1,6 +1,8 @@
 <?php
 defined('PHPWG_ROOT_PATH') or die('Hacking attempt!');
 
+check_status(ACCESS_ADMINISTRATOR);
+
 global $template, $page;
 
 include_once(PHPWG_ROOT_PATH . 'admin/include/functions.php');
@@ -302,14 +304,19 @@ $fd_filter_album = isset($_GET['fd_filter_album'])
   ? (int)$_GET['fd_filter_album']
   : (isset($conf['find_duplicates_filter_album']) ? (int)$conf['find_duplicates_filter_album'] : 0);
 
-// Save to db and update current config when settings are submitted
-if ($should_save_settings) {
+// Save to db only if a valid CSRF token is provided
+$token = isset($_POST['pwg_token']) ? $_POST['pwg_token'] : (isset($_GET['pwg_token']) ? $_GET['pwg_token'] : '');
+$is_valid_token = (!empty($token) && function_exists('get_pwg_token') && hash_equals(get_pwg_token(), $token));
+
+if ($should_save_settings && $is_valid_token) {
   conf_update_param('find_duplicates_similarity', $similarity_limit);
   conf_update_param('find_duplicates_same_album', $same_album);
   conf_update_param('find_duplicates_mode', $fd_mode);
   conf_update_param('find_duplicates_filter_album', $fd_filter_album);
   conf_update_param('find_duplicates_time_interval', $fd_time_interval);
+}
 
+if ($should_save_settings) {
   $conf['find_duplicates_similarity'] = $similarity_limit;
   $conf['find_duplicates_same_album'] = $same_album;
   $conf['find_duplicates_mode'] = $fd_mode;
@@ -363,7 +370,10 @@ if ($can_show_duplicates)
   // Cache Setup
   $cache_dir = PHPWG_ROOT_PATH . '_data/find_duplicates_cache';
   if (!is_dir($cache_dir)) {
-    mkdir($cache_dir, 0777, true);
+    mkdir($cache_dir, 0755, true);
+  }
+  if (!file_exists($cache_dir . '/index.htm')) {
+    @file_put_contents($cache_dir . '/index.htm', '');
   }
   
   // Cache key only depends on the heavy grouping parameters.

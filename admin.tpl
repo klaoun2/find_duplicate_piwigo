@@ -660,7 +660,7 @@ function scanChunk() {
       var timeInterval = document.getElementById('fd-time-interval-select').value;
 
       var filterAlbum = document.getElementById("fd-filter-album") ? document.getElementById("fd-filter-album").value : 0;
-      window.location.href = actionUrl + "&fd_mode=" + mode + "&similarity=" + sim + "&same_album=" + sameAlbum + "&fd_show_hidden=" + showHidden + "&fd_search_group=" + searchGroup + "&fd_time_interval=" + timeInterval + "&fd_filter_album=" + filterAlbum;
+      window.location.href = actionUrl + "&fd_mode=" + mode + "&similarity=" + sim + "&same_album=" + sameAlbum + "&fd_show_hidden=" + showHidden + "&fd_search_group=" + searchGroup + "&fd_time_interval=" + timeInterval + "&fd_filter_album=" + filterAlbum + "&pwg_token={$PWG_TOKEN}";
   }
 
   // Auto-submit when hidden checkbox is toggled
@@ -732,7 +732,7 @@ function scanChunk() {
         var sortVal = this.value;
 
         var filterAlbum = document.getElementById("fd-filter-album") ? document.getElementById("fd-filter-album").value : 0;
-        window.location.href = actionUrl + "&fd_mode=" + mode + "&similarity=" + similarity + "&same_album=" + sameAlbum + "&fd_show_hidden=" + showHidden + "&fd_search_group=" + searchGroup + "&fd_time_interval=" + timeInterval + "&fd_filter_album=" + filterAlbum + "&sort=" + sortVal;
+        window.location.href = actionUrl + "&fd_mode=" + mode + "&similarity=" + similarity + "&same_album=" + sameAlbum + "&fd_show_hidden=" + showHidden + "&fd_search_group=" + searchGroup + "&fd_time_interval=" + timeInterval + "&fd_filter_album=" + filterAlbum + "&sort=" + sortVal + "&pwg_token={$PWG_TOKEN}";
       });
     </script>
 
@@ -741,16 +741,16 @@ function scanChunk() {
         <div class="fd-group" data-phash="{$group.PHASH|escape:'html'}" data-title="{$group.TITLE|escape:'html'}" data-images="{$group.IMAGES|@json_encode|escape:'html'}">
           <h4 style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 10px;">
             <span>
-              {$group.TITLE} <span style="font-size: 11px; opacity: 0.6; font-weight: normal;">({if $FD_MODE == 'time'}{'Time range'|translate}{else}{'Hash:'|translate} {$group.PHASH}{/if})</span>
+              {$group.TITLE|escape:'html'} <span style="font-size: 11px; opacity: 0.6; font-weight: normal;">({if $FD_MODE == 'time'}{'Time range'|translate}{else}{'Hash:'|translate} {$group.PHASH|escape:'html'}{/if})</span>
             </span>
             <span style="display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap;">
               <span class="fd-group-size-badge">
-                <span class="fd-group-size-text">{'Size:'|translate} {if $group.TOTAL_SIZE}{$group.TOTAL_SIZE}{else}{'No data'|translate}{/if}</span>
+                <span class="fd-group-size-text">{'Size:'|translate} {if $group.TOTAL_SIZE}{$group.TOTAL_SIZE|escape:'html'}{else}{'No data'|translate}{/if}</span>
                 <span class="fd-size-popover">
                   {foreach from=$group.IMAGES item=img}
                     <span class="fd-size-popover-row" data-id="{$img.ID}">
                       <span class="fd-size-popover-name">📄 {$img.FILE|escape:'html'}</span>
-                      <span class="fd-size-popover-val">{if $img.FILE_SIZE}{$img.FILE_SIZE}{else}{'No data'|translate}{/if}</span>
+                      <span class="fd-size-popover-val">{if $img.FILE_SIZE}{$img.FILE_SIZE|escape:'html'}{else}{'No data'|translate}{/if}</span>
                     </span>
                   {/foreach}
                 </span>
@@ -763,7 +763,7 @@ function scanChunk() {
             {foreach from=$group.IMAGES item=img}
               <div class="fd-img-wrap" data-id="{$img.ID}">
                 <div class="fd-img-loader"></div>
-                <img src="{$img.FULL_URL}" class="fd-lazy-img-element" onload="this.classList.add('loaded'); this.previousElementSibling.style.display='none';" alt="{$img.NAME}">
+                <img src="{$img.FULL_URL}" class="fd-lazy-img-element" onload="this.classList.add('loaded'); this.previousElementSibling.style.display='none';" alt="{$img.NAME|escape:'html'}">
                 <div style="position: absolute; bottom: 5px; right: 5px; display: flex; gap: 3px; z-index: 3;">
                   {if $img.ALBUM_COUNT|default:0 > 1}
                     <span style="background: rgba(0,0,0,0.6); color: white; padding: 2px 5px; border-radius: 4px; font-size: 10px;" title="{'Belongs to multiple albums'|translate}">📁 {$img.ALBUM_COUNT}</span>
@@ -830,6 +830,17 @@ function scanChunk() {
   var closeBtn = document.getElementById('fd-modal-close');
   var groups = document.querySelectorAll('.fd-group');
   var isSyncZoomActive = false;
+
+  // HTML Escape Helper to prevent XSS
+  function escapeHtml(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
 
   // Format Bytes Helper for JS
   function formatBytes(bytes) {
@@ -1212,10 +1223,10 @@ function scanChunk() {
       var badgesHtml = '';
 
       var creationDate = img.DATE_CREATION ? img.DATE_CREATION : "{'Unknown'|translate|escape:'javascript'}";
-      badgesHtml += '<span class="fd-badge" title="{'Creation date'|translate|escape:'javascript'}">📅 ' + creationDate + '</span>';
+      badgesHtml += '<span class="fd-badge" title="{'Creation date'|translate|escape:'javascript'}">📅 ' + escapeHtml(creationDate) + '</span>';
 
       var fileSize = img.FILE_SIZE ? img.FILE_SIZE : "{'No data'|translate|escape:'javascript'}";
-      badgesHtml += '<span class="fd-badge" title="{'File size'|translate|escape:'javascript'}">💾 ' + fileSize + '</span>';
+      badgesHtml += '<span class="fd-badge" title="{'File size'|translate|escape:'javascript'}">💾 ' + escapeHtml(fileSize) + '</span>';
 
       if (img.HAS_GPS == 1) {
           badgesHtml += '<span class="fd-badge badge-gps" title="{'Has GPS location'|translate|escape:'javascript'}">📍 GPS</span>';
@@ -1230,11 +1241,11 @@ function scanChunk() {
          for (var cat_id in img.ALBUMS) {
             albumNames.push(img.ALBUMS[cat_id]);
          }
-         badgesHtml += '<span class="fd-badge" title="{'Albums:'|translate|escape:'javascript'} ' + albumNames.join(', ').replace(/"/g, '&quot;') + '">📁 ' + albumCount + ' {'Album(s)'|translate|escape:'javascript'}</span>';
+         badgesHtml += '<span class="fd-badge" title="{'Albums:'|translate|escape:'javascript'} ' + escapeHtml(albumNames.join(', ')) + '">📁 ' + parseInt(albumCount, 10) + ' {'Album(s)'|translate|escape:'javascript'}</span>';
       }
 
-      badgesHtml += '<span class="fd-badge" title="{'Photo ID'|translate|escape:'javascript'}">#️⃣ ' + img.ID + '</span>';
-      badgesHtml += '<span class="fd-badge" title="{'File name'|translate|escape:'javascript'}">📄 ' + img.FILE + '</span>';
+      badgesHtml += '<span class="fd-badge" title="{'Photo ID'|translate|escape:'javascript'}">#️⃣ ' + parseInt(img.ID, 10) + '</span>';
+      badgesHtml += '<span class="fd-badge" title="{'File name'|translate|escape:'javascript'}">📄 ' + escapeHtml(img.FILE) + '</span>';
 
       info.innerHTML = badgesHtml;
 
