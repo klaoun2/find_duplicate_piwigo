@@ -2,10 +2,19 @@
 // Mocking global environment for Piwigo
 define('PHPWG_ROOT_PATH', __DIR__ . '/../');
 define('PHPWG_PLUGINS_PATH', PHPWG_ROOT_PATH . 'plugins/');
+if (!defined('ACCESS_ADMINISTRATOR')) {
+    define('ACCESS_ADMINISTRATOR', 'admin');
+}
 
 // Dummy function to replace core function
 function get_root_url() {
     return '/';
+}
+
+if (!function_exists('check_status')) {
+    function check_status($status) {
+        return true;
+    }
 }
 
 global $prefixeTable;
