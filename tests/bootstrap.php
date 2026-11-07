@@ -7,6 +7,7 @@ if (!defined('ACCESS_ADMINISTRATOR')) {
 }
 
 // Dummy function to replace core function
+if (!function_exists('l10n')) { function l10n($str) { return $str; } }
 function get_root_url() {
     return '/';
 }

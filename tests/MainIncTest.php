@@ -112,4 +112,24 @@ class MainIncTest extends TestCase
         $this->assertCount(1, $queries);
         $this->assertSame("SHOW COLUMNS FROM `piwigo_find_duplicates_hashes` LIKE 'is_favorite'", $queries[0]);
     }
+
+    public function testFindDuplicatesIsMotionPhoto()
+    {
+        // Positive matches (Pixel, Samsung, Google Camera)
+        $this->assertSame(1, find_duplicates_is_motion_photo('PXL_20230501_123456.MP.jpg'));
+        $this->assertSame(1, find_duplicates_is_motion_photo('PXL_20230501_123456.PORTRAIT.MP.jpg'));
+        $this->assertSame(1, find_duplicates_is_motion_photo('PXL_20230501_123456.MP'));
+        $this->assertSame(1, find_duplicates_is_motion_photo('MVIMG_20190101_120000.jpg'));
+        $this->assertSame(1, find_duplicates_is_motion_photo('20230101_120000_MotionPhoto.jpg'));
+        $this->assertSame(1, find_duplicates_is_motion_photo('MotionPhoto_20230101_120000.jpg'));
+        $this->assertSame(1, find_duplicates_is_motion_photo('custom_name.jpg', 'PXL_20230501_123456.MP'));
+
+        // Negative matches (Videos, Audio, regular photos)
+        $this->assertSame(0, find_duplicates_is_motion_photo('video.mp4'));
+        $this->assertSame(0, find_duplicates_is_motion_photo('sample.MP4'));
+        $this->assertSame(0, find_duplicates_is_motion_photo('audio.mp3'));
+        $this->assertSame(0, find_duplicates_is_motion_photo('camping.jpg'));
+        $this->assertSame(0, find_duplicates_is_motion_photo('my_photo.png'));
+        $this->assertSame(0, find_duplicates_is_motion_photo('PXL_20230501_123456.MP.mp4'));
+    }
 }

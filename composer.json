@@ -1,5 +1,5 @@
 {
-    "name": "jules/find-duplicates",
+    "name": "oban/find-duplicates",
     "description": "Piwigo Find Duplicates plugin",
     "type": "project",
     "require-dev": {

@@ -187,6 +187,13 @@ function find_duplicates_ensure_favorite_column($table_name = null)
 
 }
 
+// Helper: detect if image is a Motion Picture based on standard vendor naming conventions (Pixel, Samsung, etc.)
+function find_duplicates_is_motion_photo($filename, $title = '')
+{
+  $pattern = '/^((MVIMG_|MotionPhoto_).*\.(jpe?g|heic|heif|png|webp|avif)$|.*[\._-](MP|MotionPhoto)(\.(jpe?g|heic|heif|png|webp|avif))?$)/i';
+  return (preg_match($pattern, (string)$filename) || (!empty($title) && preg_match($pattern, (string)$title))) ? 1 : 0;
+}
+
 
 // Add link to the main left menu in admin panel (under Photos)
 add_event_handler('loc_begin_admin_page', 'find_duplicates_admin_main_menu');

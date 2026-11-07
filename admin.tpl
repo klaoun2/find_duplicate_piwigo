@@ -567,7 +567,7 @@ function scanChunk() {
       } else {
         isScanning = false;
         document.getElementById('fd-scan-btn').innerText = '{'Scanning completed'|translate|escape:'javascript'}';
-        location.reload(); // Przeładuj, by pokazać duplikaty
+        location.reload(); // Reload to show duplicates
       }
     })
     .catch(error => {
@@ -998,7 +998,7 @@ function scanChunk() {
       });
   }
 
-  // Otwieranie modala oraz obsługa przycisku ulubionych na karcie grupy
+  // Open modal and handle group card favorite button
   groups.forEach(function(groupEl) {
     var groupFavBtn = groupEl.querySelector('.fd-group-fav-btn');
     if (groupFavBtn) {
